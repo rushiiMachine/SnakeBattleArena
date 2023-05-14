@@ -2,6 +2,7 @@ package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
 
+@SuppressWarnings("unused")
 public class Wall implements Entity {
     private final Point start, end;
 

@@ -14,8 +14,8 @@ public class ExampleSnake extends SnakeController {
 
     // Tell the server our snake's name and color to draw us with
     @Override
-    public SnakeInfo onCreateSnake() {
-        return new SnakeInfo("A crazy frog", Color.RED);
+    public SnakeInfo getSnakeInfo() {
+        return new SnakeInfo("A crazy frog", Color.GREEN);
     }
 
     // When the server decides it's time for all the snakes to move,
@@ -24,6 +24,18 @@ public class ExampleSnake extends SnakeController {
     @Override
     public MoveCommand onMove(BoardInfo board) {
         return new MoveCommand('U');
+    }
+
+    // This is called when you die from a collision or from running into a wall.
+    @Override
+    public void onDie(BoardInfo board) {
+        System.out.println("I die");
+    }
+
+    // This is called when you respawn after dying
+    @Override
+    public void onRespawn(BoardInfo board) {
+        System.out.println("Back alive!");
     }
 
     // This is called when the client finishes connecting to the server,
@@ -35,11 +47,18 @@ public class ExampleSnake extends SnakeController {
                 + " by " + board.getHeight() + "squares tall.");
     }
 
-    // This is called when another player joins the server
+    // This is called when another snake joins the server
     // Not sure why you'd need this besides trolling.
     @Override
     public void onPlayerJoined(SnakeInfo snake) {
         System.out.println(snake.getName() + " has joined!");
+    }
+
+    // This is called when another snake leaves the server.
+    // Not sure why you'd need this.
+    @Override
+    public void onPlayerLeave(SnakeInfo snake) {
+        System.out.println(snake.getName() + " has left the game!");
     }
 
     // This is called when a new apple appears on the board

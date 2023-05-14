@@ -7,8 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Snake implements Entity {
-    Point head;
-    LinkedList<Point> body;
+    private Point head;
+    private final LinkedList<Point> body;
 
     public Snake(Point initial) {
         this.head = initial;

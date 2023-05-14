@@ -2,11 +2,20 @@ package apcs.snakebattlearena.commands;
 
 import apcs.snakebattlearena.models.MoveData;
 
+/**
+ * Moves the snake in a certain direction upon a server tick.
+ */
 public class MoveCommand extends Command<MoveData> {
     private static final char[] VALID_DIRECTIONS = {'L', 'U', 'R', 'D'};
 
     private final char direction;
 
+    /**
+     * Command to move the snake in a certain direction by 1 square.
+     * Note that there is nothing stopping you from moving back
+     * onto yourself, making your snake instantly die.
+     * @param direction One of 'L' (Left), 'U' (Up), 'R' (Right), 'D' (Down)
+     */
     public MoveCommand(char direction) {
         this.direction = direction;
 
@@ -17,6 +26,9 @@ public class MoveCommand extends Command<MoveData> {
         throw new IllegalArgumentException("Invalid direction: " + direction);
     }
 
+    /**
+     * Internal websocket message identifier
+     */
     @Override
     public String getId() {
         return "MOVE";
@@ -50,7 +62,7 @@ public class MoveCommand extends Command<MoveData> {
             }
         }
 
-        return MoveData.builder()
+        return MoveData.Builder.builder()
                 .setDirection(direction)
                 .build();
     }

@@ -2,12 +2,11 @@ package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
 
+@SuppressWarnings("unused")
 public class Apple implements Entity {
-    Point position;
-
-    int reward;
-
-    boolean eaten;
+    private final Point position;
+    private final int reward;
+    private boolean eaten;
 
     public Apple(Point position, int reward) {
         this.position = position;
