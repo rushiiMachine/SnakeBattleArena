@@ -6,8 +6,7 @@ plugins {
 dependencies {
     implementation(project(":common"))
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     compileOnly("org.jetbrains:annotations:24.0.0")
 }
 
