@@ -22,7 +22,7 @@ public class Apple implements Entity {
         return eaten;
     }
 
-    public void setEaten(boolean eaten) {
+    public void _internalSetEaten(boolean eaten) {
         this.eaten = eaten;
     }
 
