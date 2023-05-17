@@ -1,16 +1,12 @@
 plugins {
     id("org.springframework.boot") version "3.0.6"
-    id("io.spring.dependency-management") version "1.1.0"
 }
+
+val springVersion = "2.7.11" // Latest base spring-boot version that uses framework 5.3.x (Java 8+)
 
 dependencies {
     implementation(project(":common"))
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-websocket")
+    implementation("org.springframework.boot:spring-boot-starter-web:$springVersion")
+    implementation("org.springframework.boot:spring-boot-starter-websocket:$springVersion")
     compileOnly("org.jetbrains:annotations:24.0.0")
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_17
 }
