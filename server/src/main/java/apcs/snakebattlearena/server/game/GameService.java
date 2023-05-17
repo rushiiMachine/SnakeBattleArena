@@ -1,10 +1,7 @@
 package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.Point;
-import apcs.snakebattlearena.entities.Apple;
-import apcs.snakebattlearena.entities.Entity;
-import apcs.snakebattlearena.entities.Snake;
-import apcs.snakebattlearena.entities.Wall;
+import apcs.snakebattlearena.entities.*;
 import apcs.snakebattlearena.models.MoveData;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,10 +9,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+/**
+ * Handles all the game logic at a fixed tick rate.
+ */
 @Service
 @EnableScheduling
 @SuppressWarnings("unused")
@@ -25,15 +26,17 @@ public class GameService {
     private final HashMap<String, MoveData> queuedMoves = new HashMap<>();
     private final ReentrantReadWriteLock queuedMovesLock = new ReentrantReadWriteLock();
 
-    private final ArrayList<Entity> entities = new ArrayList<>();
+    // All entities on this board (snake, apple, wall, etc...)
+    private final HashSet<Entity> entities = new HashSet<>();
 
     // Board with all available squares in terms of board[x][y]
     private final BoardSquare[][] board;
     private final int boardWidth, boardHeight;
 
-    public GameService(int boardWidth, int boardHeight) {
-        this.boardWidth = boardWidth;
-        this.boardHeight = boardHeight;
+    //    public GameService(int boardWidth, int boardHeight) {
+    public GameService() {
+        this.boardWidth = 25;
+        this.boardHeight = 25;
         this.board = new BoardSquare[boardWidth][boardHeight];
     }
 
@@ -47,56 +50,72 @@ public class GameService {
         }
     }
 
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(initialDelay = 1000, fixedRate = 5000)
     private void gameTick() {
+        System.out.println("tick");
+        // Lock write access to queuedMoves so that we can process all the moves.
         queuedMovesLock.writeLock().lock();
 
         try {
-            // Get all current players
-            List<Snake> players = entities.stream()
-                    .filter(entity -> entity instanceof Snake)
+            // Get all current alive players for this tick, and map each to their new calculated head position
+            Map<Snake, Point> snakeMoves = entities.parallelStream()
+                    .filter(entity -> entity instanceof Snake && !((Snake) entity).isDead()) // Find all alive snakes
                     .map(entity -> (Snake) entity)
-                    .filter(player -> !player.isDead())
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toMap(
+                            snake -> snake, // Map key
+                            snake -> { // New snake head calculated based on queuedMoves
+                                MoveData move = queuedMoves.get(snake.getName());
 
-            // Prepare for selecting new dead players
-            ArrayList<Snake> deadPlayers = new ArrayList<>(Math.min(5, players.size() / 4));
+                                if (move != null) {
+                                    // Apply the current move onto the snake head
+                                    return new Point(
+                                            snake.getHead().getX() + move.getDirection().x,
+                                            snake.getHead().getY() + move.getDirection().y);
+                                } else {
+                                    // Client did not send a move event, automatically move towards
+                                    // the last direction moved or away from the walls.
+                                    // TODO: use last moved direction
+                                    return new Point(snake.getHead().getX() + 1, snake.getHead().getY());
+                                }
+                            }
+                    ));
 
-            // Loop over all players
-            for (Snake player : players) {
-                MoveData move = queuedMoves.get(player.getName());
-
-                if (move != null) {
-                    // Apply the current move onto the snake head
-                    Point newHead = new Point(
-                            player.getHead().getX() + move.getDirection().x,
-                            player.getHead().getY() + move.getDirection().y);
-
-                    player._internalMoveHead(newHead);
-
-                    if (newHead.isOnBoard(boardWidth, boardHeight)) {
-                        BoardSquare square = board[newHead.getX()][newHead.getY()];
-                        square.addOccupier(player);
-                    } else {
-                        player._internalSetDead(true);
-                        deadPlayers.add(player);
-                    }
+            // Assign each new head to the square on the board
+            snakeMoves.forEach((snake, newHead) -> {
+                if (newHead.isOnBoard(this.boardWidth, this.boardHeight)) {
+                    // Assign this snake to the board square
+                    BoardSquare square = board[newHead.getX()][newHead.getY()];
+                    square.addOccupier(snake);
                 } else {
-                    // Client did not send a move event, automatically move towards
-                    // the last direction moved or away from the walls.
+                    // Kill this snake early because otherwise it won't be caught by
+                    // the calculations inside each square
+                    EntityModifier.setSnakeDead(snake, true);
+                }
+            });
 
-                    // TODO: store last move direction
+            // Allow each board square to perform calculations and kill/modify snakes
+            for (BoardSquare[] row : board) {
+                for (BoardSquare square : row) {
+                    square.markOverlappingDead();
                 }
             }
 
-            entities.removeAll(deadPlayers);
-            // TODO: kill all dead players
+            // Remove all dead snakes while visually preserving their new head position
+            snakeMoves.forEach((snake, newHead) -> {
+                EntityModifier.moveSnakeHead(snake, newHead);
 
-            // Clear all current moves.
+                if (snake.isDead()) {
+                    entities.remove(snake);
+                }
+            });
+
+            // TODO: send out movement data for all snakes
+
+            // Clear all current moves since they have been processed.
             queuedMoves.clear();
         } finally {
-            // Release lock on moves, allow any slow moves to still arrive,
-            // or in time for the next tick.
+            // Release lock on moves, allowing old moves from this tick or
+            // new moves for the next tick to arrive.
             queuedMovesLock.writeLock().unlock();
         }
     }
@@ -130,18 +149,19 @@ public class GameService {
             if (occupiers.size() <= 1) return;
 
             // Get amount of snakes and walls in this square
-            long invalidOverlappingCount = occupiers.stream()
+            long overlappableEntities = occupiers.stream()
                     .filter(e -> e instanceof Snake || e instanceof Wall)
                     .count();
 
-            if (invalidOverlappingCount > 1) {
+            if (overlappableEntities > 1) {
                 // Overlapping snakes, mark them dead
                 occupiers.stream()
                         .filter(e -> e instanceof Snake)
-                        .forEach(e -> ((Snake) e)._internalSetDead(true));
+                        .forEach(s -> EntityModifier.setSnakeDead((Snake) s, true));
 
                 // Remove dead snakes & apples
-                occupiers.removeIf(e -> e instanceof Apple || (e instanceof Snake && ((Snake) e).isDead()));
+                occupiers.removeIf(e -> e instanceof Apple
+                        || (e instanceof Snake && ((Snake) e).isDead()));
             } else {
                 // Just snake and an apple are left
                 Apple apple = (Apple) occupiers.stream()
@@ -155,8 +175,8 @@ public class GameService {
                 if (apple == null || snake == null) return;
 
                 // Apply effects to snake
-                apple._internalSetEaten(true);
-                snake._internalAddCurledLength(apple.getReward());
+                EntityModifier.setAppleAsEaten(apple);
+                EntityModifier.addSnakeCurledLength(snake, apple.getReward());
 
                 // Remove the apple
                 occupiers.remove(apple);

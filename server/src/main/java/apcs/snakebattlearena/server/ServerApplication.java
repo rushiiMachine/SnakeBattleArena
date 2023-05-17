@@ -11,6 +11,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import java.awt.*;
 
 @SpringBootApplication
+@SuppressWarnings("unused")
 public class ServerApplication {
     /**
      * Start the API & background game service
