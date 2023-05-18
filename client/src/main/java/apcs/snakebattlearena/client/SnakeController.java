@@ -39,11 +39,11 @@ public abstract class SnakeController {
      *
      * @param board The state of the board at the current tick.
      */
-    public void onDie(BoardInfo board) {}
+    public void onDeath(BoardInfo board) {}
 
     /**
      * Called when you respawn after a death. Note that if there's a respawn delay,
-     * this may not be called instantly after {@link SnakeController#onDie(BoardInfo)}.
+     * this may not be called instantly after {@link SnakeController#onDeath(BoardInfo)}.
      *
      * @param board The state of the board at the current tick.
      */

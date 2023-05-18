@@ -1,5 +1,6 @@
 package apcs.snakebattlearena.server;
 
+import apcs.snakebattlearena.server.game.GameConfig;
 import apcs.snakebattlearena.server.serializers.ColorDeserializer;
 import apcs.snakebattlearena.server.serializers.ColorSerializer;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -18,6 +19,12 @@ public class ServerApplication {
      */
     public static void main(String[] args) {
         SpringApplication.run(ServerApplication.class, args);
+    }
+
+    // Load game config
+    @Bean
+    public GameConfig loadGameConfig() {
+        return new GameConfig(25, 25);
     }
 
     // Register additional custom JSON serializers to be used

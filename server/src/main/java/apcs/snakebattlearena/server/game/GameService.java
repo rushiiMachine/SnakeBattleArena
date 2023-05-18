@@ -1,13 +1,18 @@
 package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.Point;
-import apcs.snakebattlearena.entities.*;
+import apcs.snakebattlearena.entities.Entity;
+import apcs.snakebattlearena.entities.EntityModifier;
+import apcs.snakebattlearena.entities.ServerSnake;
+import apcs.snakebattlearena.entities.Snake;
+import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,11 +38,16 @@ public class GameService {
     private final BoardSquare[][] board;
     private final int boardWidth, boardHeight;
 
-    //    public GameService(int boardWidth, int boardHeight) {
-    public GameService() {
-        this.boardWidth = 25;
-        this.boardHeight = 25;
+    public GameService(GameConfig config) {
+        this.boardWidth = config.getBoardWidth();
+        this.boardHeight = config.getBoardHeight();
+
+        // Initialize board
         this.board = new BoardSquare[boardWidth][boardHeight];
+        Arrays.parallelSetAll(this.board, i -> new BoardSquare[boardHeight]);
+        for (BoardSquare[] column : this.board) {
+            Arrays.parallelSetAll(column, i -> new BoardSquare());
+        }
     }
 
     public void movePlayer(String name, MoveData data) {
@@ -50,38 +60,58 @@ public class GameService {
         }
     }
 
-    @Scheduled(initialDelay = 1000, fixedRate = 5000)
+    /**
+     * Handle each game tick that's scheduled for every 500ms by Spring.
+     * Handle all the queued moves and send out updated data.
+     */
+    @Scheduled(initialDelay = 250, fixedRate = 5000)
     private void gameTick() {
-        System.out.println("tick");
+        long time = System.currentTimeMillis();
+
         // Lock write access to queuedMoves so that we can process all the moves.
         queuedMovesLock.writeLock().lock();
 
         try {
             // Get all current alive players for this tick, and map each to their new calculated head position
-            Map<Snake, Point> snakeMoves = entities.parallelStream()
-                    .filter(entity -> entity instanceof Snake && !((Snake) entity).isDead()) // Find all alive snakes
-                    .map(entity -> (Snake) entity)
+            Map<@NotNull ServerSnake, @NotNull Point> snakeMoves = entities.parallelStream()
+                    .filter(entity -> entity instanceof ServerSnake && !((Snake) entity).isDead()) // Find all alive snakes
+                    .map(entity -> (ServerSnake) entity)
                     .collect(Collectors.toMap(
                             snake -> snake, // Map key
                             snake -> { // New snake head calculated based on queuedMoves
                                 MoveData move = queuedMoves.get(snake.getName());
+                                Direction facing = move != null ? move.getDirection() : snake.getFacing();
 
-                                if (move != null) {
+                                // Either we have move data for this tick or we have the direction its facing from an earlier tick
+                                if (facing != null) {
+                                    snake.setFacing(facing);
+
                                     // Apply the current move onto the snake head
                                     return new Point(
-                                            snake.getHead().getX() + move.getDirection().x,
-                                            snake.getHead().getY() + move.getDirection().y);
+                                            snake.getHead().getX() + facing.x,
+                                            snake.getHead().getY() + facing.y);
                                 } else {
-                                    // Client did not send a move event, automatically move towards
-                                    // the last direction moved or away from the walls.
-                                    // TODO: use last moved direction
-                                    return new Point(snake.getHead().getX() + 1, snake.getHead().getY());
+                                    // No move data for this tick nor facing from previous ticks.
+                                    // Move away from the sides of the board just this once instead.
+                                    Point head = snake.getHead();
+                                    Direction newFacing = head.getX() > this.boardWidth / 2
+                                            ? Direction.LEFT
+                                            : Direction.RIGHT;
+
+                                    snake.setFacing(newFacing);
+
+                                    return new Point(
+                                            head.getX() + newFacing.x,
+                                            head.getY() + newFacing.y);
                                 }
                             }
                     ));
 
-            // Assign each new head to the square on the board
+            if (snakeMoves.isEmpty()) return;
+
+            // Assign each snake to the position of its new head on the board
             snakeMoves.forEach((snake, newHead) -> {
+                // Check if the new head is in board bounds
                 if (newHead.isOnBoard(this.boardWidth, this.boardHeight)) {
                     // Assign this snake to the board square
                     BoardSquare square = board[newHead.getX()][newHead.getY()];
@@ -94,15 +124,21 @@ public class GameService {
             });
 
             // Allow each board square to perform calculations and kill/modify snakes
-            for (BoardSquare[] row : board) {
-                for (BoardSquare square : row) {
+            for (BoardSquare[] col : board) {
+                for (BoardSquare square : col) {
                     square.markOverlappingDead();
                 }
             }
 
             // Remove all dead snakes while visually preserving their new head position
             snakeMoves.forEach((snake, newHead) -> {
+                Point oldTail = snake.getTail();
                 EntityModifier.moveSnakeHead(snake, newHead);
+
+                // Check if the tail has changed, if so remove from board square
+                if (oldTail != null && snake.getTail() != oldTail) {
+                    board[oldTail.getX()][oldTail.getY()].removeOccupier(snake);
+                }
 
                 if (snake.isDead()) {
                     entities.remove(snake);
@@ -118,69 +154,7 @@ public class GameService {
             // new moves for the next tick to arrive.
             queuedMovesLock.writeLock().unlock();
         }
-    }
 
-    /**
-     * Represents a logical square on the board.
-     * Note that what is shown visually may not represent what logically is happening.
-     * i.e. Dead snakes survive visually n+1 ticks after they are marked dead and removed from the board.
-     */
-    private static class BoardSquare {
-        // Maximum possible entities is 6 because: 1 @ self, 4 corners moving in, and an apple or wall.
-        private final ArrayList<Entity> occupiers = new ArrayList<>(6);
-
-        /**
-         * Add an occupying entity to this square logically.
-         */
-        public void addOccupier(Entity entity) {
-            if (occupiers.size() >= 5) {
-                throw new IllegalStateException("A square cannot have more than 5 occupiers at the same time!");
-            }
-
-            occupiers.add(entity);
-        }
-
-        /**
-         * Mark any overlapping snakes dead, mark apples eaten, and
-         * remove both as occupiers of this square <em>logically.</em>
-         */
-        public void markOverlappingDead() {
-            // No overlapping entities
-            if (occupiers.size() <= 1) return;
-
-            // Get amount of snakes and walls in this square
-            long overlappableEntities = occupiers.stream()
-                    .filter(e -> e instanceof Snake || e instanceof Wall)
-                    .count();
-
-            if (overlappableEntities > 1) {
-                // Overlapping snakes, mark them dead
-                occupiers.stream()
-                        .filter(e -> e instanceof Snake)
-                        .forEach(s -> EntityModifier.setSnakeDead((Snake) s, true));
-
-                // Remove dead snakes & apples
-                occupiers.removeIf(e -> e instanceof Apple
-                        || (e instanceof Snake && ((Snake) e).isDead()));
-            } else {
-                // Just snake and an apple are left
-                Apple apple = (Apple) occupiers.stream()
-                        .filter(e -> e instanceof Apple)
-                        .findFirst().orElse(null);
-
-                Snake snake = (Snake) occupiers.stream()
-                        .filter(e -> e instanceof Snake)
-                        .findFirst().orElse(null);
-
-                if (apple == null || snake == null) return;
-
-                // Apply effects to snake
-                EntityModifier.setAppleAsEaten(apple);
-                EntityModifier.addSnakeCurledLength(snake, apple.getReward());
-
-                // Remove the apple
-                occupiers.remove(apple);
-            }
-        }
+        System.out.println("tick: " + (System.currentTimeMillis() - time) + "ms");
     }
 }

@@ -1,7 +1,6 @@
 package apcs.snakebattlearena.models;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -16,23 +15,9 @@ public abstract class MoveData {
     @JsonProperty("direction")
     public abstract Direction getDirection();
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    public enum Direction {
-        LEFT(-1, 0),
-        UP(0, 1),
-        RIGHT(1, 0),
-        DOWN(0, -1);
-
-        /**
-         * Positive or negative coordinate difference.
-         */
-        public final int x, y;
-
-        Direction(int xDiff, int yDiff) {
-            this.x = xDiff;
-            this.y = yDiff;
-        }
-    }
+    @NotNull
+    @JsonProperty("snakeName")
+    public abstract String getSnakeName();
 
     @AutoValue.Builder
     @SuppressWarnings("NullableProblems")
@@ -45,6 +30,10 @@ public abstract class MoveData {
         @NotNull
         @JsonProperty("direction")
         public abstract Builder setDirection(@NotNull Direction direction);
+
+        @NotNull
+        @JsonProperty("snakeName")
+        public abstract Builder setSnakeName(@NotNull String name);
 
         @NotNull
         public abstract MoveData build();

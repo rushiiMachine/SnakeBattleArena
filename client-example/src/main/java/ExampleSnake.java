@@ -28,7 +28,7 @@ public class ExampleSnake extends SnakeController {
 
     // This is called when you die from a collision or from running into a wall.
     @Override
-    public void onDie(BoardInfo board) {
+    public void onDeath(BoardInfo board) {
         System.out.println("I die");
     }
 

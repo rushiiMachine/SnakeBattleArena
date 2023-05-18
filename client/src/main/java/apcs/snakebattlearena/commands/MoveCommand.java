@@ -1,5 +1,6 @@
 package apcs.snakebattlearena.commands;
 
+import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
 
 /**
@@ -36,24 +37,24 @@ public class MoveCommand extends Command<MoveData> {
 
     @Override
     public MoveData toJsonData() {
-        MoveData.Direction direction;
+        Direction direction;
 
         switch (this.direction) {
             case 'L': {
-                direction = MoveData.Direction.LEFT;
+                direction = Direction.LEFT;
                 break;
             }
             case 'U': {
-                direction = MoveData.Direction.UP;
+                direction = Direction.UP;
                 break;
             }
             case 'R': {
-                direction = MoveData.Direction.RIGHT;
+                direction = Direction.RIGHT;
                 break;
             }
 
             case 'D': {
-                direction = MoveData.Direction.DOWN;
+                direction = Direction.DOWN;
                 break;
             }
 
