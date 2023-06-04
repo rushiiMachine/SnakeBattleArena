@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum Direction {
     LEFT(-1, 0),
-    UP(0, 1),
+    UP(0, -1),
     RIGHT(1, 0),
-    DOWN(0, -1);
+    DOWN(0, 1);
 
     /**
      * Positive or negative coordinate difference.

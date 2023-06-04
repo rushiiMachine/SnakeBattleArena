@@ -208,6 +208,7 @@ public class GameService {
                     }
 
                     entities.remove(snake);
+                    removedEntities.add(snake);
                 }
             });
 
