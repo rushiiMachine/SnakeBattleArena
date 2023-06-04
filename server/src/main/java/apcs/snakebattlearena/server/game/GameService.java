@@ -122,8 +122,13 @@ public class GameService {
                                 MoveData move = queuedMoves.get(snake.getName());
 
                                 // Update client alive status
-                                if (move == null) {
+                                if (move == null && !snake.isClientAlive()) {
+                                    logger.info("Player \"{}\" has missed a large amount of ticks, disconnecting...", snake.getName());
+                                    EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
+                                    // TODO: disconnect ws
+                                } else if (move == null) {
                                     snake.incrementMissedTicks();
+                                    logger.info("Player \"{}\" has missed a tick! ({})", snake.getName(), snake.getMissedTickCount());
                                 } else {
                                     snake.resetMissedTicks();
                                 }

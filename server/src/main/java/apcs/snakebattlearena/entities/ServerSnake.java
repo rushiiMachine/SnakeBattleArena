@@ -12,7 +12,7 @@ import java.awt.*;
  */
 public class ServerSnake extends Snake {
     private Direction facing = null;
-    private int missedTicks = 0;
+    private byte missedTicks = 0;
 
     public ServerSnake(@NotNull String name, @NotNull Color color, @NotNull Point initial) {
         super(name, color, initial);
@@ -57,5 +57,13 @@ public class ServerSnake extends Snake {
      */
     public void incrementMissedTicks() {
         missedTicks++;
+    }
+
+    /**
+     * Get the amount of sequential ticks missed.
+     * Refer to {@link ServerSnake#isClientAlive()} for more information.
+     */
+    public int getMissedTickCount() {
+        return missedTicks;
     }
 }
