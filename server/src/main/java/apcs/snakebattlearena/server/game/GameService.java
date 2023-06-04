@@ -9,6 +9,7 @@ import apcs.snakebattlearena.models.DeathReason;
 import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
 import apcs.snakebattlearena.models.TickData;
+import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import apcs.snakebattlearena.server.websocket.WebsocketSender;
 import apcs.snakebattlearena.utils.Predicates;
 import org.slf4j.Logger;
@@ -18,7 +19,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.awt.*;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -68,21 +68,36 @@ public class GameService {
     public GameService(GameConfig config) {
         this.board = new Board(config.getBoardWidth(), config.getBoardHeight());
 
-        // TODO: remove this
-        Snake s = new ServerSnake(
-                "rusher",
-                Color.PINK,
-                new Point(0, 0)
-        );
-        entities.add(s);
-        Objects.requireNonNull(board.getSquare(s.getHead())).addOccupier(s);
-
         // Pre-generate apples
         for (int i = 0; i < config.getAppleCount(); i++) {
             entities.add(board.generateNewApple());
         }
 
         board.printBoardToConsole();
+    }
+
+    /**
+     * Adds a new player to the board.
+     * @param snakeData The metadata about the new snake.
+     * @return True if successful otherwise it's a duplicate snake.
+     */
+    public boolean addPlayer(SnakeMetadata snakeData) {
+        // Check if the player is already on this board
+        boolean snakeExists = entities.stream()
+                .filter(Entity::isSnake).map(e -> (Snake) e)
+                .map(Snake::getName)
+                .anyMatch(name -> name.equals(snakeData.getName()));
+
+        if (snakeExists) return false;
+
+        // Store new snake
+        ServerSnake snake = new ServerSnake(
+                snakeData.getName(),
+                snakeData.getColor(),
+                board.getRandomPoint());
+
+        entities.add(snake);
+        return true;
     }
 
     /**
@@ -124,7 +139,7 @@ public class GameService {
                                 // Update client alive status
                                 if (move == null && !snake.isClientAlive()) {
                                     logger.info("Player \"{}\" has missed a large amount of ticks, disconnecting...", snake.getName());
-                                    EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
+//                                    EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
                                     // TODO: disconnect ws
                                 } else if (move == null) {
                                     snake.incrementMissedTicks();

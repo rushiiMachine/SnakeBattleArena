@@ -5,12 +5,16 @@ import apcs.snakebattlearena.entities.Apple;
 import apcs.snakebattlearena.entities.EntityModifier;
 import apcs.snakebattlearena.utils.Probability;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Random;
 
 public class Board {
+    private final Random rnd = new Random();
+
     /**
      * Random weighted apple reward values
      */
@@ -89,28 +93,38 @@ public class Board {
     }
 
     /**
-     * Finds an open spot on the board, gets a random reward value
-     * based on predefined apple rewards values, then makes an apple
-     * then adds it to the board.
+     * Find an open square on this board.
+     * @return A point to that square or an exception if its full.
+     * TODO: figure out what to do when full?
      */
-    public Apple generateNewApple() {
-        Random rnd = new Random();
+    @NotNull
+    public Point getRandomPoint() {
         int x = -1, y = -1;
-
-        // Find a random empty square on the board
         int attempts = 0;
+
         while (x < 0 || y < 0 || board[x][y].occupyingCount() >= 1) {
             if (++attempts > boardWidth * boardHeight) {
-                throw new IllegalStateException("Cannot add a new apple as the board is full!");
+                throw new IllegalStateException("Board is full!");
             }
 
             x = rnd.nextInt(boardWidth);
             y = rnd.nextInt(boardHeight);
         }
 
+        return new Point(x, y);
+    }
+
+    /**
+     * Finds an open spot on the board, gets a random reward value
+     * based on predefined apple rewards values, then makes an apple
+     * then adds it to the board.
+     */
+    public Apple generateNewApple() {
+        Point point = getRandomPoint();
+
         // Store the new apple
-        Apple apple = EntityModifier.newApple(new Point(x, y), APPLES_RANDOM.getRandomValue());
-        board[x][y].addOccupier(apple);
+        Apple apple = EntityModifier.newApple(point, APPLES_RANDOM.getRandomValue());
+        Objects.requireNonNull(getSquare(point)).addOccupier(apple);
         return apple;
     }
 
