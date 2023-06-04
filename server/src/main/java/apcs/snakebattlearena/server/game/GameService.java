@@ -1,14 +1,16 @@
 package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.Point;
-import apcs.snakebattlearena.entities.*;
+import apcs.snakebattlearena.entities.Entity;
+import apcs.snakebattlearena.entities.EntityModifier;
+import apcs.snakebattlearena.entities.ServerSnake;
+import apcs.snakebattlearena.entities.Snake;
 import apcs.snakebattlearena.models.DeathReason;
 import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
 import apcs.snakebattlearena.models.TickData;
 import apcs.snakebattlearena.server.websocket.WebsocketHandler;
 import apcs.snakebattlearena.utils.Predicates;
-import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,14 +50,9 @@ public class GameService {
     private final ReentrantReadWriteLock tickLock = new ReentrantReadWriteLock();
 
     /**
-     * Board with all available squares. Squares are stored by <code>board[x][y]</code>.
+     * The board containing all the collision logic and squares.
      */
-    private final BoardSquare[][] board;
-
-    /**
-     * Board width/height initialized when GameService is.
-     */
-    private final int boardWidth, boardHeight;
+    private final Board board;
 
     /**
      * Logger for this service to log debug info.
@@ -69,16 +66,7 @@ public class GameService {
     private WebsocketHandler websocket;
 
     public GameService(GameConfig config) {
-        this.boardWidth = config.getBoardWidth();
-        this.boardHeight = config.getBoardHeight();
-
-        // Initialize board
-        this.board = new BoardSquare[boardWidth][boardHeight];
-        Arrays.parallelSetAll(this.board, i -> {
-            BoardSquare[] column = new BoardSquare[boardHeight];
-            Arrays.parallelSetAll(column, i2 -> new BoardSquare());
-            return column;
-        });
+        this.board = new Board(config.getBoardWidth(), config.getBoardHeight());
 
         // TODO: remove this
         Snake s = new ServerSnake(
@@ -87,11 +75,14 @@ public class GameService {
                 new Point(0, 0)
         );
         entities.add(s);
-        board[0][0].addOccupier(s);
+        Objects.requireNonNull(board.getSquare(s.getHead())).addOccupier(s);
+
+        // Pre-generate apples
         for (int i = 0; i < 50; i++) {
-            addApple();
+            board.generateNewApple();
         }
-        printBoard();
+
+        board.printBoardToConsole();
     }
 
     /**
@@ -113,7 +104,7 @@ public class GameService {
      * Handle each game tick that's scheduled for every 500ms by Spring.
      * Handles all the queued moves and sends out updated data.
      */
-    @Scheduled(initialDelay = 250, fixedRate = 500)
+    @Scheduled(initialDelay = 250, fixedRate = 5000)
     private void gameTick() {
         long tickStartTime = System.currentTimeMillis();
 
@@ -153,7 +144,7 @@ public class GameService {
                                     // No move data for this tick nor facing from previous ticks.
                                     // Move away from the sides of the board just this once instead.
                                     Point head = snake.getHead();
-                                    Direction newFacing = head.getX() > this.boardWidth / 2
+                                    Direction newFacing = head.getX() > board.getBoardWidth() / 2
                                             ? Direction.LEFT
                                             : Direction.RIGHT;
 
@@ -171,19 +162,18 @@ public class GameService {
             // Update the logical positions of this snake on the board
             snakeMoves.forEach((snake, newHead) -> {
                 // Check if the new head is in board bounds
-                if (newHead.isOnBoard(this.boardWidth, this.boardHeight)) {
+                if (board.isPointOnBoard(newHead)) {
                     // Move the head on the snake itself
                     Point oldTail = snake.getTail();
                     EntityModifier.moveSnake(snake, newHead);
 
                     // If the tail has moved, then remove the old tail from the old square
-                    if (snake.getTail() != oldTail) {
-                        board[oldTail.getX()][oldTail.getY()].removeOccupier(snake);
+                    if (!snake.getTail().equals(oldTail)) {
+                        Objects.requireNonNull(board.getSquare(oldTail)).removeOccupier(snake);
                     }
 
                     // Assign this snake to its new head square
-                    BoardSquare square = board[newHead.getX()][newHead.getY()];
-                    square.addOccupier(snake);
+                    Objects.requireNonNull(board.getSquare(newHead)).addOccupier(snake);
                 } else {
                     // Kill this snake early because otherwise it won't be caught by
                     // the calculations inside each square
@@ -193,7 +183,8 @@ public class GameService {
 
             // Allow each board square to perform calculations and kill/modify snakes
             // Collect all removed entities into one de-duplicated list.
-            Set<Entity<?>> removedEntities = Stream.of(board).parallel()
+            // TODO: move this to Board(?)
+            Set<Entity<?>> removedEntities = Stream.of(board.getBoard()).parallel()
                     .flatMap(column -> Stream.of(column).parallel()
                             .map(BoardSquare::process)
                             .filter(Objects::nonNull)
@@ -201,16 +192,14 @@ public class GameService {
                     .collect(Collectors.toSet());
 
             // Remove all dead snakes while visually preserving their new head position
-            // TODO: each square process can already removes dead snakes from their own square if they've already been marked dead
-            // probably should only do it once here instead
+            // TODO: each square process already removes dead snakes from their own square if they've already been marked dead, probably should only do it once here instead
             snakeMoves.forEach((snake, newHead) -> {
                 if (snake.isDead()) {
-                    // TODO: clean this up
-                    Point head = snake.getHead();
-                    board[head.getX()][head.getY()].removeOccupier(snake);
+                    // Remove all parts of the snake from the board
+                    Objects.requireNonNull(board.getSquare(snake.getHead())).removeOccupier(snake);
 
-                    for (Point p : snake.getBody()) {
-                        board[p.getX()][p.getY()].removeOccupier(snake);
+                    for (Point body : snake.getBody()) {
+                        Objects.requireNonNull(board.getSquare(body)).removeOccupier(snake);
                     }
 
                     entities.remove(snake);
@@ -220,7 +209,8 @@ public class GameService {
             // Count the eaten apples and add a new apple elsewhere on the board
             removedEntities.stream()
                     .filter(Entity::isApple)
-                    .forEach((a) -> addApple());
+                    .map((a) -> board.generateNewApple())
+                    .forEach(entities::add); // Store the new apple to entities
 
             // Build the new tick data and send it out to all clients.
             TickData tick = TickData.Builder.builder()
@@ -240,77 +230,11 @@ public class GameService {
             // new moves for the next tick to arrive.
             tickLock.writeLock().unlock();
 
+            // Log the tick time
             long totalTickTime = System.currentTimeMillis() - tickStartTime;
             logger.info("Game Tick time: {}ms", totalTickTime);
 
-            printBoard();
+            board.printBoardToConsole();
         }
-    }
-
-    /**
-     * Internal debugging utility for printing the board to the console in a pretty format.
-     * Since the board is stored as (x,y) then we have to rotate it 90° and flip vertically.
-     */
-    private void printBoard() {
-        StringBuffer buf = new StringBuffer((boardHeight + 1) * boardWidth);
-
-        // Prefill with newlines for most of them to be replaced below
-        for (int i = 0; i < buf.capacity(); i++) {
-            buf.append('\n');
-        }
-
-        for (int x = 0; x < boardWidth; x++) {
-            for (int y = 0; y < boardHeight; y++) {
-                int index = y * (boardWidth + 1) + x;
-                char display = board[x][y].occupyingCount() > 0 ? 'X' : '.';
-                buf.setCharAt(index, display);
-            }
-        }
-
-        System.out.println(Strings.repeat("-", boardWidth));
-        System.out.print(buf);
-        System.out.println(Strings.repeat("-", boardWidth));
-    }
-
-    /**
-     * Finds an open spot on the board and gets a random reward
-     * value based on predefined apple rewards values with a probability,
-     * then stores it to the board.
-     */
-    private void addApple() {
-        Random rnd = new Random();
-        int reward = 0, x = -1, y = -1;
-
-        // Probabilities for each apple spawning
-        // Apple value -> probability of spawning (0.0-1.0)
-        double[] probabilities = {
-                4, 0.05,
-                3, 0.10,
-                2, 0.15,
-                1, 0.75,
-        };
-
-        // Generate a random reward value based on predefined probability values
-        int rewardRandom = rnd.nextInt(1, 101);
-        for (int i = 0; i < probabilities.length / 2; i++) {
-            double probability = probabilities[i * 2 + 1];
-            int inverseProbability = (int) ((1 - probability) * 100);
-
-            if (rewardRandom >= inverseProbability) {
-                reward = (int) probabilities[i * 2];
-            }
-        }
-
-        // Find a random empty square on the board
-        while (x < 0 || y < 0 || board[x][y].occupyingCount() >= 1) {
-            x = rnd.nextInt(boardWidth);
-            y = rnd.nextInt(boardHeight);
-        }
-
-        Apple apple = EntityModifier.newApple(new Point(x, y), reward);
-
-        // Store the new apple
-        entities.add(apple);
-        board[x][y].addOccupier(apple);
     }
 }
