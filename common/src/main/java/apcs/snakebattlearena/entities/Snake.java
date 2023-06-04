@@ -1,6 +1,9 @@
 package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.models.DeathReason;
+import apcs.snakebattlearena.models.entities.SnakeData;
+import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,7 +18,7 @@ import java.util.Objects;
  * or reused until client disconnects on the server side.
  */
 @SuppressWarnings("unused")
-public class Snake implements Entity {
+public class Snake implements Entity<SnakeData> {
     // Metadata
     private final String name;
     private final Color color;
@@ -26,7 +29,7 @@ public class Snake implements Entity {
     private int curledLength;
 
     // Other
-    private boolean dead;
+    private DeathReason deathReason;
 
     /**
      * Internal method for creating a new arbitrary snake.
@@ -38,7 +41,7 @@ public class Snake implements Entity {
         this.head = Objects.requireNonNull(head, "Cannot have snake with a null head point!");
         this.body = new LinkedList<>();
         this.curledLength = 0;
-        this.dead = false;
+        this.deathReason = null;
     }
 
     /**
@@ -75,17 +78,16 @@ public class Snake implements Entity {
     }
 
     /**
-     * Gets the last point of the snake trail.
-     *
-     * @return Point of the snake tail. Can be null.
+     * Gets any last part of the snake body. Can be either
+     * the last part of the body or head if none.
      */
-    @Nullable
+    @NotNull
     public Point getTail() {
-        return body.isEmpty() ? null : body.getLast();
+        return body.isEmpty() ? head : body.getLast();
     }
 
     /**
-     * Get the <em>full</em> length of this snake, including the body, head,
+     * Get the <b>full</b> length of this snake, including the body, head,
      * and curled tail length! (refer to {@link Snake#getCurledLength()}
      */
     public int getLength() {
@@ -112,40 +114,71 @@ public class Snake implements Entity {
      * the optimal path.
      */
     public boolean isDead() {
-        return dead;
+        return deathReason != null;
     }
 
     /**
      * Internal method for setting the snake death state.
      */
-    void setDead(boolean dead) {
-        this.dead = dead;
+    void setDead(@Nullable DeathReason deathReason) {
+        this.deathReason = deathReason;
+    }
+
+    /**
+     * Get the current death reason if this snake is dead,
+     * otherwise null. Refer to {@link Snake#isDead()} for more information.
+     */
+    public DeathReason getDeathReason() {
+        return deathReason;
     }
 
     /**
      * Internal method for moving the head and subsequently shifting
      * the old head into the body and uncurling the tail.
      */
-    void moveHead(@NotNull Point newHead) {
-        // If end curled then don't remove the tail
-        if (curledLength <= 0) {
+    void moveSnake(@NotNull Point newHead) {
+        boolean hasBody = !body.isEmpty();
+        System.out.printf("moved snake: %s newHead: %s curled: %s hasBody: %s %n", this, newHead, curledLength, hasBody);
+
+        if (curledLength <= 0 && hasBody) {
             body.removeLast();
-        } else {
-            curledLength--;
+            body.addFirst(head);
         }
 
-        body.addFirst(head);
+        if (curledLength > 0) {
+            curledLength--;
+            body.addFirst(head);
+        }
+
         head = newHead;
     }
 
     /**
-     * Internal method for adding curled tail length
+     * Internal method for increasing the curled tail length.
      */
     void addCurledLength(int amount) {
-        if (amount <= 0) {
+        if (amount < 0) {
             throw new IllegalArgumentException("Cannot shrink curled length with a negative number!");
         }
 
         this.curledLength += amount;
+    }
+
+    @Override
+    public boolean isCollidable() {
+        return true;
+    }
+
+    @Override
+    public SnakeData toJsonData() {
+        return SnakeData.Builder.builder()
+                .setMetadata(SnakeMetadata.Builder.builder()
+                        .setName(name)
+                        .setColor(color)
+                        .build())
+                .setBody(getBody())
+                .setHead(head)
+                .setCurledLength(curledLength)
+                .build();
     }
 }

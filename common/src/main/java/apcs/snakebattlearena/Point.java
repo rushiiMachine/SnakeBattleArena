@@ -19,7 +19,6 @@ public final class Point {
      *            +------+------+
      *      (2,0)      (1,2)      (2,2)
      * </pre>
-     *
      * @param x The x coordinate
      * @param y The y coordinate
      */
@@ -44,8 +43,7 @@ public final class Point {
 
     /**
      * Checks if this point is on the board.
-     *
-     * @param boardWidth The game board width
+     * @param boardWidth  The game board width
      * @param boardHeight The game board height
      */
     public boolean isOnBoard(int boardWidth, int boardHeight) {

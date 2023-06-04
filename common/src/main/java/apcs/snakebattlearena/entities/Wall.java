@@ -1,9 +1,10 @@
 package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.models.entities.WallData;
 
 @SuppressWarnings("unused")
-public class Wall implements Entity {
+public class Wall implements Entity<WallData> {
     private final Point start, end;
 
     public Wall(Point start, Point end) {
@@ -57,5 +58,18 @@ public class Wall implements Entity {
 
         // Check if distance from both sides of point adds up to the line length
         return Math.abs(a - c) + Math.abs(b - c) == Math.abs(a - b);
+    }
+
+    @Override
+    public boolean isCollidable() {
+        return true;
+    }
+
+    @Override
+    public WallData toJsonData() {
+        return WallData.Builder.builder()
+                .setStart(start)
+                .setEnd(end)
+                .build();
     }
 }

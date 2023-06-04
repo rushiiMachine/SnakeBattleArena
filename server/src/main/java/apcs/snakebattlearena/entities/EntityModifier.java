@@ -1,7 +1,9 @@
 package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.models.DeathReason;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 
@@ -15,12 +17,13 @@ public class EntityModifier {
         return new Snake(name, color, initial);
     }
 
-    public static void setSnakeDead(@NotNull Snake snake, boolean dead) {
-        snake.setDead(dead);
+    public static void setSnakeDead(@NotNull Snake snake,
+                                    @Nullable DeathReason deathReason) {
+        snake.setDead(deathReason);
     }
 
-    public static void moveSnakeHead(@NotNull Snake snake, Point newHead) {
-        snake.moveHead(newHead);
+    public static void moveSnake(@NotNull Snake snake, Point newHead) {
+        snake.moveSnake(newHead);
     }
 
     public static void addSnakeCurledLength(@NotNull Snake snake, int amount) {

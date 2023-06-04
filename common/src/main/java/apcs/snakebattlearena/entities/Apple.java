@@ -1,13 +1,14 @@
 package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.models.entities.AppleData;
 
 /**
  * An arbitrary apple that is only used once per client (recreated every lifecycle event)
  * or reused until disconnecting on the server side.
  */
 @SuppressWarnings("unused")
-public class Apple implements Entity {
+public class Apple implements Entity<AppleData> {
     private final Point position;
     private final int reward;
     private boolean eaten;
@@ -47,5 +48,19 @@ public class Apple implements Entity {
      */
     void setAsEaten() {
         this.eaten = true;
+    }
+
+    @Override
+    public boolean isCollidable() {
+        return false;
+    }
+
+    @Override
+    public AppleData toJsonData() {
+        return AppleData.Builder.builder()
+                .setPosition(position)
+                .setReward(reward)
+                .setEaten(eaten)
+                .build();
     }
 }

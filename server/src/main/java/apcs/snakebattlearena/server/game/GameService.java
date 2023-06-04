@@ -1,23 +1,26 @@
 package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.Point;
-import apcs.snakebattlearena.entities.Entity;
-import apcs.snakebattlearena.entities.EntityModifier;
-import apcs.snakebattlearena.entities.ServerSnake;
-import apcs.snakebattlearena.entities.Snake;
+import apcs.snakebattlearena.entities.*;
+import apcs.snakebattlearena.models.DeathReason;
 import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
-import org.jetbrains.annotations.NotNull;
+import apcs.snakebattlearena.models.TickData;
+import apcs.snakebattlearena.server.websocket.WebsocketHandler;
+import apcs.snakebattlearena.utils.Predicates;
+import org.apache.logging.log4j.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.awt.*;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Handles all the game logic at a fixed tick rate.
@@ -26,17 +29,44 @@ import java.util.stream.Collectors;
 @EnableScheduling
 @SuppressWarnings("unused")
 public class GameService {
-    // Queued moves between each tick to be processed at the next tick
-    // Player name -> Latest received move data
+    /**
+     * Queued moves between each tick to be processed at the next tick.
+     * <br/>
+     * Player name -> Latest received move data
+     */
     private final HashMap<String, MoveData> queuedMoves = new HashMap<>();
-    private final ReentrantReadWriteLock queuedMovesLock = new ReentrantReadWriteLock();
 
-    // All entities on this board (snake, apple, wall, etc...)
-    private final HashSet<Entity> entities = new HashSet<>();
+    /**
+     * All entities on this board (snake, apple, wall, etc...)
+     */
+    private final HashSet<Entity<?>> entities = new HashSet<>();
 
-    // Board with all available squares in terms of board[x][y]
+    /**
+     * Dual-purpose lock for {@link GameService#queuedMoves} and {@link GameService#entities}
+     * to prevent race conditions between message receivers and the game thread.
+     */
+    private final ReentrantReadWriteLock tickLock = new ReentrantReadWriteLock();
+
+    /**
+     * Board with all available squares. Squares are stored by <code>board[x][y]</code>.
+     */
     private final BoardSquare[][] board;
+
+    /**
+     * Board width/height initialized when GameService is.
+     */
     private final int boardWidth, boardHeight;
+
+    /**
+     * Logger for this service to log debug info.
+     */
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    /**
+     * The websocket message sender/receiver taken from Spring DI.
+     */
+    @Autowired
+    private WebsocketHandler websocket;
 
     public GameService(GameConfig config) {
         this.boardWidth = config.getBoardWidth();
@@ -44,43 +74,72 @@ public class GameService {
 
         // Initialize board
         this.board = new BoardSquare[boardWidth][boardHeight];
-        Arrays.parallelSetAll(this.board, i -> new BoardSquare[boardHeight]);
-        for (BoardSquare[] column : this.board) {
-            Arrays.parallelSetAll(column, i -> new BoardSquare());
+        Arrays.parallelSetAll(this.board, i -> {
+            BoardSquare[] column = new BoardSquare[boardHeight];
+            Arrays.parallelSetAll(column, i2 -> new BoardSquare());
+            return column;
+        });
+
+        // TODO: remove this
+        Snake s = new ServerSnake(
+                "rusher",
+                Color.PINK,
+                new Point(0, 0)
+        );
+        entities.add(s);
+        board[0][0].addOccupier(s);
+        for (int i = 0; i < 50; i++) {
+            addApple();
         }
+        printBoard();
     }
 
-    public void movePlayer(String name, MoveData data) {
-        queuedMovesLock.writeLock().lock();
+    /**
+     * Queues up a player move to be processed at the next tick.
+     * @param name The name of the snake coming from the metadata.
+     * @param data The new move data for this tick.
+     */
+    public void addPlayerMoveToQueue(String name, MoveData data) {
+        tickLock.writeLock().lock();
 
         try {
             queuedMoves.put(name, data);
         } finally {
-            queuedMovesLock.writeLock().unlock();
+            tickLock.writeLock().unlock();
         }
     }
 
     /**
      * Handle each game tick that's scheduled for every 500ms by Spring.
-     * Handle all the queued moves and send out updated data.
+     * Handles all the queued moves and sends out updated data.
      */
-    @Scheduled(initialDelay = 250, fixedRate = 5000)
+    @Scheduled(initialDelay = 250, fixedRate = 500)
     private void gameTick() {
-        long time = System.currentTimeMillis();
+        long tickStartTime = System.currentTimeMillis();
 
         // Lock write access to queuedMoves so that we can process all the moves.
-        queuedMovesLock.writeLock().lock();
+        tickLock.writeLock().lock();
 
         try {
             // Get all current alive players for this tick, and map each to their new calculated head position
-            Map<@NotNull ServerSnake, @NotNull Point> snakeMoves = entities.parallelStream()
-                    .filter(entity -> entity instanceof ServerSnake && !((Snake) entity).isDead()) // Find all alive snakes
-                    .map(entity -> (ServerSnake) entity)
+            Map<ServerSnake, Point> snakeMoves = entities.parallelStream()
+                    .filter(Entity::isSnake).map(entity -> (ServerSnake) entity) // Get all snakes
+                    .filter(Predicates.not(Snake::isDead)) // Find all alive snakes
                     .collect(Collectors.toMap(
                             snake -> snake, // Map key
                             snake -> { // New snake head calculated based on queuedMoves
                                 MoveData move = queuedMoves.get(snake.getName());
-                                Direction facing = move != null ? move.getDirection() : snake.getFacing();
+
+                                // Update client alive status
+                                if (move == null) {
+                                    snake.incrementMissedTicks();
+                                } else {
+                                    snake.resetMissedTicks();
+                                }
+
+                                Direction facing = move != null
+                                        ? move.getDirection()
+                                        : snake.getFacing();
 
                                 // Either we have move data for this tick or we have the direction its facing from an earlier tick
                                 if (facing != null) {
@@ -119,42 +178,139 @@ public class GameService {
                 } else {
                     // Kill this snake early because otherwise it won't be caught by
                     // the calculations inside each square
-                    EntityModifier.setSnakeDead(snake, true);
+                    EntityModifier.setSnakeDead(snake, DeathReason.BOARD_COLLISION);
                 }
             });
 
             // Allow each board square to perform calculations and kill/modify snakes
-            for (BoardSquare[] col : board) {
-                for (BoardSquare square : col) {
-                    square.markOverlappingDead();
-                }
-            }
+            // Collect all removed entities into one de-duplicated list.
+            Set<Entity<?>> removedEntities = Stream.of(board).parallel()
+                    .flatMap(column -> Stream.of(column).parallel()
+                            .map(BoardSquare::process) // FIXME: the square is processed while snake tails have not yet been removed logically
+                            .filter(Objects::nonNull)
+                            .flatMap(Collection::stream))
+                    .collect(Collectors.toSet());
 
             // Remove all dead snakes while visually preserving their new head position
             snakeMoves.forEach((snake, newHead) -> {
-                Point oldTail = snake.getTail();
-                EntityModifier.moveSnakeHead(snake, newHead);
-
-                // Check if the tail has changed, if so remove from board square
-                if (oldTail != null && snake.getTail() != oldTail) {
-                    board[oldTail.getX()][oldTail.getY()].removeOccupier(snake);
-                }
-
+                // Remove the dead snake from all squares
                 if (snake.isDead()) {
+                    // TODO: clean this up
+                    Point head = snake.getHead();
+                    board[head.getX()][head.getY()].removeOccupier(snake);
+
+                    for (Point p : snake.getBody()) {
+                        board[p.getX()][p.getY()].removeOccupier(snake);
+                    }
+
                     entities.remove(snake);
+                    EntityModifier.moveSnake(snake, newHead);
+                }
+                // Check if the tail has changed, if so remove from board square
+                else {
+                    Point oldTail = snake.getTail();
+                    EntityModifier.moveSnake(snake, newHead);
+
+                    if (snake.getTail() != oldTail) {
+                        board[oldTail.getX()][oldTail.getY()].removeOccupier(snake);
+                    }
                 }
             });
 
-            // TODO: send out movement data for all snakes
+            // Count the eaten apples and add a new apple elsewhere on the board
+            removedEntities.stream()
+                    .filter(Entity::isApple)
+                    .forEach((a) -> addApple());
+
+            // Build the new tick data and send it out to all clients.
+            TickData tick = TickData.Builder.builder()
+                    .setEntities(entities.stream()
+                            .map(Entity::toJsonData)
+                            .collect(Collectors.toList()))
+                    .setRemovedEntities(removedEntities.stream()
+                            .map(Entity::toJsonData)
+                            .collect(Collectors.toList()))
+                    .build();
+            websocket.sendTick(tick);
 
             // Clear all current moves since they have been processed.
             queuedMoves.clear();
         } finally {
             // Release lock on moves, allowing old moves from this tick or
             // new moves for the next tick to arrive.
-            queuedMovesLock.writeLock().unlock();
+            tickLock.writeLock().unlock();
+
+            long totalTickTime = System.currentTimeMillis() - tickStartTime;
+            logger.info("Game Tick time: {}ms", totalTickTime);
+
+            printBoard();
+        }
+    }
+
+    /**
+     * Internal debugging utility for printing the board to the console in a pretty format.
+     * Since the board is stored as (x,y) then we have to rotate it 90° and flip vertically.
+     */
+    private void printBoard() {
+        StringBuffer buf = new StringBuffer((boardHeight + 1) * boardWidth);
+
+        // Prefill with newlines for most of them to be replaced below
+        for (int i = 0; i < buf.capacity(); i++) {
+            buf.append('\n');
         }
 
-        System.out.println("tick: " + (System.currentTimeMillis() - time) + "ms");
+        for (int x = 0; x < boardWidth; x++) {
+            for (int y = 0; y < boardHeight; y++) {
+                int index = y * (boardWidth + 1) + x;
+                char display = board[x][y].occupyingCount() > 0 ? 'X' : '.';
+                buf.setCharAt(index, display);
+            }
+        }
+
+        System.out.println(Strings.repeat("-", boardWidth));
+        System.out.print(buf);
+        System.out.println(Strings.repeat("-", boardWidth));
+    }
+
+    /**
+     * Finds an open spot on the board and gets a random reward
+     * value based on predefined apple rewards values with a probability,
+     * then stores it to the board.
+     */
+    private void addApple() {
+        Random rnd = new Random();
+        int reward = 0, x = -1, y = -1;
+
+        // Probabilities for each apple spawning
+        // Apple value -> probability of spawning (0.0-1.0)
+        double[] probabilities = {
+                4, 0.05,
+                3, 0.10,
+                2, 0.15,
+                1, 0.75,
+        };
+
+        // Generate a random reward value based on predefined probability values
+        int rewardRandom = rnd.nextInt(1, 101);
+        for (int i = 0; i < probabilities.length / 2; i++) {
+            double probability = probabilities[i * 2 + 1];
+            int inverseProbability = (int) ((1 - probability) * 100);
+
+            if (rewardRandom >= inverseProbability) {
+                reward = (int) probabilities[i * 2];
+            }
+        }
+
+        // Find a random empty square on the board
+        while (x < 0 || y < 0 || board[x][y].occupyingCount() >= 1) {
+            x = rnd.nextInt(boardWidth);
+            y = rnd.nextInt(boardHeight);
+        }
+
+        Apple apple = EntityModifier.newApple(new Point(x, y), reward);
+
+        // Store the new apple
+        entities.add(apple);
+        board[x][y].addOccupier(apple);
     }
 }

@@ -1,4 +1,4 @@
-package apcs.snakebattlearena.models;
+package apcs.snakebattlearena.models.entities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -10,9 +10,9 @@ import org.jetbrains.annotations.NotNull;
 import java.awt.*;
 
 @AutoValue
-@JsonSerialize(as = SnakeData.class)
-@JsonDeserialize(builder = SnakeData.Builder.class)
-public abstract class SnakeData {
+@JsonSerialize(as = SnakeMetadata.class)
+@JsonDeserialize(builder = SnakeMetadata.Builder.class)
+public abstract class SnakeMetadata {
     @NotNull
     @JsonProperty("name")
     public abstract String getName();
@@ -27,7 +27,7 @@ public abstract class SnakeData {
         @NotNull
         @JsonCreator
         public static Builder builder() {
-            return new AutoValue_SnakeData.Builder();
+            return new AutoValue_SnakeMetadata.Builder();
         }
 
         @NotNull
@@ -39,6 +39,6 @@ public abstract class SnakeData {
         public abstract Builder setColor(Color name);
 
         @NotNull
-        public abstract SnakeData build();
+        public abstract SnakeMetadata build();
     }
 }

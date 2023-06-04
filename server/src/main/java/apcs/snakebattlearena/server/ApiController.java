@@ -1,7 +1,7 @@
 package apcs.snakebattlearena.server;
 
 import apcs.snakebattlearena.models.MoveData;
-import apcs.snakebattlearena.models.SnakeData;
+import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import org.springframework.web.bind.annotation.*;
 
 import java.awt.*;
@@ -11,8 +11,8 @@ import java.awt.*;
 @SuppressWarnings("unused")
 public class ApiController {
     @GetMapping("/snake")
-    public SnakeData newSnake() {
-        return SnakeData.Builder.builder()
+    public SnakeMetadata newSnake() {
+        return SnakeMetadata.Builder.builder()
                 .setName("rusherv2")
                 .setColor(Color.PINK)
                 .build();
