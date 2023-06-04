@@ -24,14 +24,14 @@ public class Board {
     /**
      * Board width/height measured in square count.
      */
-    private final int boardWidth, boardHeight;
+    private final short boardWidth, boardHeight;
 
     /**
      * Board with all available squares. Squares are stored by <code>board[x][y]</code>.
      */
     private final BoardSquare[][] board;
 
-    public Board(int width, int height) {
+    public Board(short width, short height) {
         this.boardWidth = width;
         this.boardHeight = height;
 
@@ -98,11 +98,15 @@ public class Board {
         int x = -1, y = -1;
 
         // Find a random empty square on the board
+        int attempts = 0;
         while (x < 0 || y < 0 || board[x][y].occupyingCount() >= 1) {
+            if (++attempts > boardWidth * boardHeight) {
+                throw new IllegalStateException("Cannot add a new apple as the board is full!");
+            }
+
             x = rnd.nextInt(boardWidth);
             y = rnd.nextInt(boardHeight);
         }
-
 
         // Store the new apple
         Apple apple = EntityModifier.newApple(new Point(x, y), APPLES_RANDOM.getRandomValue());

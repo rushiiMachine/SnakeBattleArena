@@ -78,7 +78,7 @@ public class GameService {
         Objects.requireNonNull(board.getSquare(s.getHead())).addOccupier(s);
 
         // Pre-generate apples
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < config.getAppleCount(); i++) {
             board.generateNewApple();
         }
 

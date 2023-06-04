@@ -8,5 +8,6 @@ dependencies {
     implementation(project(":common"))
     implementation("org.springframework.boot:spring-boot-starter-web:$springVersion")
     implementation("org.springframework.boot:spring-boot-starter-websocket:$springVersion")
+    implementation("org.springframework.boot:spring-boot-starter-validation:$springVersion")
     compileOnly("org.jetbrains:annotations:24.0.0")
 }
