@@ -26,6 +26,6 @@ public class ServerApplication {
         return new Jackson2ObjectMapperBuilder()
                 .serializerByType(Color.class, new ColorSerializer())
                 .deserializerByType(Color.class, new ColorDeserializer())
-                .serializationInclusion(JsonInclude.Include.ALWAYS);
+                .serializationInclusion(JsonInclude.Include.NON_DEFAULT);
     }
 }
