@@ -138,7 +138,6 @@ public class Snake implements Entity<SnakeData> {
      */
     void moveSnake(@NotNull Point newHead) {
         boolean hasBody = !body.isEmpty();
-        System.out.printf("moved snake: %s newHead: %s curled: %s hasBody: %s %n", this, newHead, curledLength, hasBody);
 
         if (curledLength <= 0 && hasBody) {
             body.removeLast();

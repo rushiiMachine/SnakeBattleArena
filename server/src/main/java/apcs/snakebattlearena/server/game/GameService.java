@@ -168,11 +168,20 @@ public class GameService {
 
             if (snakeMoves.isEmpty()) return;
 
-            // Assign each snake to the position of its new head on the board
+            // Update the logical positions of this snake on the board
             snakeMoves.forEach((snake, newHead) -> {
                 // Check if the new head is in board bounds
                 if (newHead.isOnBoard(this.boardWidth, this.boardHeight)) {
-                    // Assign this snake to the board square
+                    // Move the head on the snake itself
+                    Point oldTail = snake.getTail();
+                    EntityModifier.moveSnake(snake, newHead);
+
+                    // If the tail has moved, then remove the old tail from the old square
+                    if (snake.getTail() != oldTail) {
+                        board[oldTail.getX()][oldTail.getY()].removeOccupier(snake);
+                    }
+
+                    // Assign this snake to its new head square
                     BoardSquare square = board[newHead.getX()][newHead.getY()];
                     square.addOccupier(snake);
                 } else {
@@ -186,14 +195,15 @@ public class GameService {
             // Collect all removed entities into one de-duplicated list.
             Set<Entity<?>> removedEntities = Stream.of(board).parallel()
                     .flatMap(column -> Stream.of(column).parallel()
-                            .map(BoardSquare::process) // FIXME: the square is processed while snake tails have not yet been removed logically
+                            .map(BoardSquare::process)
                             .filter(Objects::nonNull)
                             .flatMap(Collection::stream))
                     .collect(Collectors.toSet());
 
             // Remove all dead snakes while visually preserving their new head position
+            // TODO: each square process can already removes dead snakes from their own square if they've already been marked dead
+            // probably should only do it once here instead
             snakeMoves.forEach((snake, newHead) -> {
-                // Remove the dead snake from all squares
                 if (snake.isDead()) {
                     // TODO: clean this up
                     Point head = snake.getHead();
@@ -204,16 +214,6 @@ public class GameService {
                     }
 
                     entities.remove(snake);
-                    EntityModifier.moveSnake(snake, newHead);
-                }
-                // Check if the tail has changed, if so remove from board square
-                else {
-                    Point oldTail = snake.getTail();
-                    EntityModifier.moveSnake(snake, newHead);
-
-                    if (snake.getTail() != oldTail) {
-                        board[oldTail.getX()][oldTail.getY()].removeOccupier(snake);
-                    }
                 }
             });
 
