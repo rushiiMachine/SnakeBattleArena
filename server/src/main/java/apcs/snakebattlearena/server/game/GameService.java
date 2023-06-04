@@ -79,7 +79,7 @@ public class GameService {
 
         // Pre-generate apples
         for (int i = 0; i < config.getAppleCount(); i++) {
-            board.generateNewApple();
+            entities.add(board.generateNewApple());
         }
 
         board.printBoardToConsole();
