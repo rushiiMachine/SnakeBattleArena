@@ -9,7 +9,7 @@ import apcs.snakebattlearena.models.DeathReason;
 import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
 import apcs.snakebattlearena.models.TickData;
-import apcs.snakebattlearena.server.websocket.WebsocketHandler;
+import apcs.snakebattlearena.server.websocket.WebsocketSender;
 import apcs.snakebattlearena.utils.Predicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,10 +60,10 @@ public class GameService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
-     * The websocket message sender/receiver taken from Spring DI.
+     * The websocket message sender taken from Spring DI.
      */
     @Autowired
-    private WebsocketHandler websocket;
+    private WebsocketSender websocket;
 
     public GameService(GameConfig config) {
         this.board = new Board(config.getBoardWidth(), config.getBoardHeight());
