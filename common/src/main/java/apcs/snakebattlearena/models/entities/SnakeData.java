@@ -36,7 +36,6 @@ public abstract class SnakeData extends EntityData {
     public abstract DeathReason getDeathReason();
 
     @AutoValue.Builder
-    @SuppressWarnings("NullableProblems")
     public abstract static class Builder {
         @JsonCreator
         public static Builder builder() {

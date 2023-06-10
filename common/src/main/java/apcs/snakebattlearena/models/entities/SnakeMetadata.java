@@ -22,23 +22,18 @@ public abstract class SnakeMetadata {
     public abstract Color getColor();
 
     @AutoValue.Builder
-    @SuppressWarnings("NullableProblems")
     public abstract static class Builder {
-        @NotNull
         @JsonCreator
         public static Builder builder() {
             return new AutoValue_SnakeMetadata.Builder();
         }
 
-        @NotNull
         @JsonProperty("name")
-        public abstract Builder setName(String name);
+        public abstract Builder setName(@NotNull String name);
 
-        @NotNull
         @JsonProperty("color")
-        public abstract Builder setColor(Color name);
+        public abstract Builder setColor(@NotNull Color name);
 
-        @NotNull
         public abstract SnakeMetadata build();
     }
 }

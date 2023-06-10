@@ -18,7 +18,6 @@ public abstract class BoardData {
     public abstract int getHeight();
 
     @AutoValue.Builder
-    @SuppressWarnings("NullableProblems")
     public abstract static class Builder {
         @NotNull
         @JsonCreator
@@ -26,15 +25,12 @@ public abstract class BoardData {
             return new AutoValue_BoardData.Builder();
         }
 
-        @NotNull
         @JsonProperty("width")
         public abstract Builder setWidth(int width);
 
-        @NotNull
         @JsonProperty("height")
         public abstract Builder setHeight(int height);
 
-        @NotNull
         public abstract BoardData build();
     }
 }

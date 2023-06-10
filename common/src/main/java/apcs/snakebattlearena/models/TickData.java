@@ -14,30 +14,27 @@ import java.util.List;
 @JsonSerialize(as = TickData.class)
 @JsonDeserialize(builder = TickData.Builder.class)
 public abstract class TickData {
+    @NotNull
     @JsonProperty("entities")
     public abstract List<EntityData> getEntities();
 
+    @NotNull
     @JsonProperty("removedEntities")
     public abstract List<EntityData> getRemovedEntities();
 
     @AutoValue.Builder
-    @SuppressWarnings("NullableProblems")
     public abstract static class Builder {
-        @NotNull
         @JsonCreator
         public static Builder builder() {
             return new AutoValue_TickData.Builder();
         }
 
-        @NotNull
         @JsonProperty("entities")
-        public abstract Builder setEntities(List<EntityData> entities);
+        public abstract Builder setEntities(@NotNull List<EntityData> entities);
 
-        @NotNull
         @JsonProperty("removedEntities")
-        public abstract Builder setRemovedEntities(List<EntityData> snakes);
+        public abstract Builder setRemovedEntities(@NotNull List<EntityData> snakes);
 
-        @NotNull
         public abstract TickData build();
     }
 }

@@ -16,18 +16,15 @@ public abstract class MoveData {
     public abstract Direction getDirection();
 
     @AutoValue.Builder
-    @SuppressWarnings("NullableProblems")
     public abstract static class Builder {
         @JsonCreator
         public static Builder builder() {
             return new AutoValue_MoveData.Builder();
         }
 
-        @NotNull
         @JsonProperty("direction")
         public abstract Builder setDirection(@NotNull Direction direction);
 
-        @NotNull
         public abstract MoveData build();
     }
 }
