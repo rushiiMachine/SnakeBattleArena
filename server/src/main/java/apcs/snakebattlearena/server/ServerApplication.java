@@ -1,7 +1,10 @@
 package apcs.snakebattlearena.server;
 
-import apcs.snakebattlearena.server.serializers.ColorDeserializer;
-import apcs.snakebattlearena.server.serializers.ColorSerializer;
+import apcs.snakebattlearena.serializers.ColorDeserializer;
+import apcs.snakebattlearena.serializers.ColorSerializer;
+import apcs.snakebattlearena.serializers.SemVerDeserializer;
+import apcs.snakebattlearena.serializers.SemVerSerializer;
+import apcs.snakebattlearena.util.SemVer;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -26,6 +29,8 @@ public class ServerApplication {
         return new Jackson2ObjectMapperBuilder()
                 .serializerByType(Color.class, new ColorSerializer())
                 .deserializerByType(Color.class, new ColorDeserializer())
+                .serializerByType(SemVer.class, new SemVerSerializer())
+                .deserializerByType(SemVer.class, new SemVerDeserializer())
                 .serializationInclusion(JsonInclude.Include.NON_DEFAULT);
     }
 }

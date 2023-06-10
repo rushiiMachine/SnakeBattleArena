@@ -1,4 +1,4 @@
-package apcs.snakebattlearena.server.serializers;
+package apcs.snakebattlearena.serializers;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;

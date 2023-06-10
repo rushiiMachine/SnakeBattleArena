@@ -2,20 +2,32 @@ package apcs.snakebattlearena.entities;
 
 import apcs.snakebattlearena.Point;
 import apcs.snakebattlearena.models.Direction;
+import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.*;
+import java.util.UUID;
 
 /**
  * A snake used only for the server to store additional properties.
  */
 public class ServerSnake extends Snake {
+    private final UUID id;
     private Direction facing = null;
-    private byte missedTicks = 0;
+    private int missedTicks = 0;
 
-    public ServerSnake(@NotNull String name, @NotNull Color color, @NotNull Point initial) {
-        super(name, color, initial);
+    public ServerSnake(@NotNull UUID id,
+                       @NotNull SnakeMetadata metadata,
+                       @NotNull Point initial) {
+        super(metadata.getName(), metadata.getColor(), initial);
+        this.id = id;
+    }
+
+    /**
+     * Gets the principal ID associated with this snake's websocket connection.
+     */
+    public UUID getId() {
+        return id;
     }
 
     /**

@@ -5,12 +5,10 @@ import apcs.snakebattlearena.entities.Entity;
 import apcs.snakebattlearena.entities.EntityModifier;
 import apcs.snakebattlearena.entities.ServerSnake;
 import apcs.snakebattlearena.entities.Snake;
-import apcs.snakebattlearena.models.DeathReason;
-import apcs.snakebattlearena.models.Direction;
-import apcs.snakebattlearena.models.MoveData;
-import apcs.snakebattlearena.models.TickData;
+import apcs.snakebattlearena.models.*;
 import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import apcs.snakebattlearena.server.websocket.WebsocketSender;
+import apcs.snakebattlearena.server.websocket.WebsocketUserManager;
 import apcs.snakebattlearena.utils.Predicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,16 +52,13 @@ public class GameService {
      */
     private final Board board;
 
-    /**
-     * Logger for this service to log debug info.
-     */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    /**
-     * The websocket message sender taken from Spring DI.
-     */
     @Autowired
     private WebsocketSender websocket;
+
+    @Autowired
+    private WebsocketUserManager websocketUsers;
 
     public GameService(GameConfig config) {
         this.board = new Board(config.getBoardWidth(), config.getBoardHeight());
@@ -79,25 +74,82 @@ public class GameService {
     /**
      * Adds a new player to the board.
      * @param snakeData The metadata about the new snake.
-     * @return True if successful otherwise it's a duplicate snake.
+     * @return A join error if unsuccessful otherwise empty.
      */
-    public boolean addPlayer(SnakeMetadata snakeData) {
-        // Check if the player is already on this board
-        boolean snakeExists = entities.stream()
-                .filter(Entity::isSnake).map(e -> (Snake) e)
-                .map(Snake::getName)
-                .anyMatch(name -> name.equals(snakeData.getName()));
+    public Optional<JoinError> addPlayer(UUID playerId, SnakeMetadata snakeData) {
+        // Lock write access to entities
+        tickLock.writeLock().lock();
 
-        if (snakeExists) return false;
+        try {
+            JoinError err = null;
 
-        // Store new snake
-        ServerSnake snake = new ServerSnake(
-                snakeData.getName(),
-                snakeData.getColor(),
-                board.getRandomPoint());
+            // Check if the player is already on this board based on name or ID
+            for (Entity<?> e : entities) {
+                if (!(e instanceof ServerSnake))
+                    continue;
 
-        entities.add(snake);
-        return true;
+                ServerSnake snake = (ServerSnake) e;
+
+                if (snake.getId().equals(playerId)) {
+                    err = JoinError.INVALID_SESSION;
+                    break;
+                }
+
+                if (snake.getName().equals(snakeData.getName())) {
+                    err = JoinError.PLAYER_EXISTS;
+                    break;
+                }
+            }
+
+            // Return error if any
+            if (err != null) {
+                return Optional.of(err);
+            }
+
+            // Store the new snake
+            ServerSnake snake = new ServerSnake(
+                    playerId,
+                    snakeData,
+                    board.getRandomPoint());
+
+            logger.info("A new player {} has joined the game!", snakeData.getName());
+
+            entities.add(snake);
+            return Optional.empty();
+        } finally {
+            // Remove the lock on entities
+            tickLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Mark a player dead to be removed at the next tick, and disconnect their websocket connection.
+     * @param playerId The snake's ID ({@link ServerSnake#getId()})
+     * @return True if the player exists and has been removed otherwise false.
+     */
+    public boolean removePlayer(UUID playerId) {
+        // Lock access to entities
+        tickLock.writeLock().lock();
+
+        try {
+            // Find the snake by id
+            ServerSnake snake = entities.stream()
+                    .filter(Entity::isSnake).map(e -> (ServerSnake) e)
+                    .filter(s -> s.getId().equals(playerId))
+                    .findFirst().orElse(null);
+
+            if (snake == null)
+                return false;
+
+            logger.info("Player {} has left the game!", snake.getName());
+
+            // Kill the snake to be removed at the next tick
+            EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
+            return true;
+        } finally {
+            // Unlock entities
+            tickLock.writeLock().unlock();
+        }
     }
 
     /**
@@ -106,11 +158,13 @@ public class GameService {
      * @param data The new move data for this tick.
      */
     public void addPlayerMoveToQueue(String name, MoveData data) {
+        // Lock write access to queuedMoves
         tickLock.writeLock().lock();
 
         try {
             queuedMoves.put(name, data);
         } finally {
+            // Unlock queuedMoves
             tickLock.writeLock().unlock();
         }
     }
@@ -139,8 +193,8 @@ public class GameService {
                                 // Update client alive status
                                 if (move == null && !snake.isClientAlive()) {
                                     logger.info("Player \"{}\" has missed a large amount of ticks, disconnecting...", snake.getName());
-//                                    EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
-                                    // TODO: disconnect ws
+                                    EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
+                                    websocketUsers.disconnectUser(snake.getId());
                                 } else if (move == null) {
                                     snake.incrementMissedTicks();
                                     logger.info("Player \"{}\" has missed a tick! ({})", snake.getName(), snake.getMissedTickCount());
@@ -253,7 +307,7 @@ public class GameService {
 
             // Log the tick time
             long totalTickTime = System.currentTimeMillis() - tickStartTime;
-            logger.info("Game Tick time: {}ms", totalTickTime);
+            logger.debug("Game Tick time: {}ms", totalTickTime);
 
             board.printBoardToConsole();
         }

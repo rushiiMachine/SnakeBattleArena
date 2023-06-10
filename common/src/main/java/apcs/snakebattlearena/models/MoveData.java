@@ -15,10 +15,6 @@ public abstract class MoveData {
     @JsonProperty("direction")
     public abstract Direction getDirection();
 
-    @NotNull
-    @JsonProperty("snakeName")
-    public abstract String getSnakeName();
-
     @AutoValue.Builder
     @SuppressWarnings("NullableProblems")
     public abstract static class Builder {
@@ -30,10 +26,6 @@ public abstract class MoveData {
         @NotNull
         @JsonProperty("direction")
         public abstract Builder setDirection(@NotNull Direction direction);
-
-        @NotNull
-        @JsonProperty("snakeName")
-        public abstract Builder setSnakeName(@NotNull String name);
 
         @NotNull
         public abstract MoveData build();

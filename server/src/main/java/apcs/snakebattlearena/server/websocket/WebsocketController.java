@@ -1,14 +1,27 @@
 package apcs.snakebattlearena.server.websocket;
 
+import com.sun.security.auth.UserPrincipal;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.EventListener;
+import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.messaging.SessionConnectEvent;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
+import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
+
+import java.lang.ref.WeakReference;
+import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Configure a SockJS Websocket receiver on (/) for communication over
@@ -22,10 +35,24 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 @EnableWebSocketMessageBroker
 @SuppressWarnings("unused")
 public class WebsocketController implements WebSocketMessageBrokerConfigurer {
+    /**
+     * Stores all active websocket connections by the random principal ID -> websocket connection.
+     */
+    public final Map<UUID, WeakReference<WebSocketSession>> sessions = new HashMap<>();
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/") // Register WebSocket handler to (/)
                 .setAllowedOriginPatterns("*") // Disable CORS
+                .setHandshakeHandler(new DefaultHandshakeHandler() { // Handle new connections to add a unique identifier to them
+                    @Override
+                    protected Principal determineUser(@NotNull ServerHttpRequest request,
+                                                      @NotNull WebSocketHandler wsHandler,
+                                                      @NotNull Map<String, Object> attributes) {
+                        return new UserPrincipal(UUID.randomUUID().toString());
+                    }
+                })
                 .withSockJS(); // Use the SockJS protocol
     }
 
@@ -38,13 +65,49 @@ public class WebsocketController implements WebSocketMessageBrokerConfigurer {
         registry.setApplicationDestinationPrefixes("/client");
     }
 
-    @EventListener(SessionConnectEvent.class)
-    public void onApplicationEvent(@NotNull SessionConnectEvent event) {
-        System.out.println("New client has conntected.");
-    }
+    // Store all active websocket connections
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registry) {
+        registry.addDecoratorFactory(handler -> new WebSocketHandlerDecorator(handler) {
+            @Override
+            public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
+                Principal user = session.getPrincipal();
 
-    @EventListener(SessionDisconnectEvent.class)
-    public void onApplicationEvent(SessionDisconnectEvent event) {
-        System.out.println(event.getSessionId() + " has disconnected.");
+                logger.info("New websocket connection initialized! (User: {})",
+                        user != null ? user.getName() : "UNKNOWN");
+
+                // Store the new session
+                if (user != null) {
+                    UUID uuid = UUID.fromString(user.getName());
+
+                    synchronized (sessions) {
+                        sessions.put(uuid, new WeakReference<>(session));
+                    }
+                }
+
+                super.afterConnectionEstablished(session);
+            }
+
+            @Override
+            public void afterConnectionClosed(@NotNull WebSocketSession session,
+                                              @NotNull CloseStatus closeStatus) throws Exception {
+                Principal user = session.getPrincipal();
+
+                logger.info("Websocket session has disconnected with code {}. (User: {})",
+                        closeStatus.getCode(),
+                        user != null ? user.getName() : "UNKNOWN");
+
+                // Remove the stored session
+                if (user != null) {
+                    UUID uuid = UUID.fromString(user.getName());
+
+                    synchronized (sessions) {
+                        sessions.remove(uuid);
+                    }
+                }
+
+                super.afterConnectionClosed(session, closeStatus);
+            }
+        });
     }
 }
