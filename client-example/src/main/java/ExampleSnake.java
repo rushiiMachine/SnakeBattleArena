@@ -1,8 +1,7 @@
-import apcs.snakebattlearena.BoardInfo;
-import apcs.snakebattlearena.client.SnakeController;
-import apcs.snakebattlearena.client.SnakeInfo;
-import apcs.snakebattlearena.commands.MoveCommand;
-import apcs.snakebattlearena.entities.Apple;
+import apcs.snakebattlearena.*;
+import apcs.snakebattlearena.client.*;
+import apcs.snakebattlearena.commands.*;
+import apcs.snakebattlearena.entities.*;
 
 import java.awt.*;
 
