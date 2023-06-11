@@ -5,7 +5,6 @@ import apcs.snakebattlearena.entities.Entity;
 import apcs.snakebattlearena.entities.EntityModifier;
 import apcs.snakebattlearena.entities.Snake;
 import apcs.snakebattlearena.models.DeathReason;
-import apcs.snakebattlearena.utils.Predicates;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -66,8 +65,8 @@ class BoardSquare {
         // Mark all snakes in this square dead since there's more than 1 collidable entity.
         if (collidableEntities > 1) {
             occupiers.stream()
-                    .filter(Entity::isSnake).map(e -> (Snake) e)
-                    .filter(Predicates.not(Snake::isDead))
+                    .filter(Entity::isSnake).map(e -> (Snake) e) // Get all snakes
+                    .filter(s -> !s.isDead()) // Filter out dead snakes
                     .forEach(snake -> {
                         // If a snake is already marked to be removed, then that means
                         // it's body is in this square twice, and as such is a self-collision.

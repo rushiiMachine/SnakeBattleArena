@@ -36,9 +36,9 @@ import java.util.UUID;
 @SuppressWarnings("unused")
 public class WebsocketController implements WebSocketMessageBrokerConfigurer {
     /**
-     * Stores all active websocket connections by the random principal ID -> websocket connection.
+     * Stores all active websocket connections by the associated random principal ID -> websocket connection.
      */
-    public final Map<UUID, WeakReference<WebSocketSession>> sessions = new HashMap<>();
+    public final Map<String, WeakReference<WebSocketSession>> sessions = new HashMap<>();
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
@@ -78,10 +78,8 @@ public class WebsocketController implements WebSocketMessageBrokerConfigurer {
 
                 // Store the new session
                 if (user != null) {
-                    UUID uuid = UUID.fromString(user.getName());
-
                     synchronized (sessions) {
-                        sessions.put(uuid, new WeakReference<>(session));
+                        sessions.put(user.getName(), new WeakReference<>(session));
                     }
                 }
 
@@ -99,10 +97,8 @@ public class WebsocketController implements WebSocketMessageBrokerConfigurer {
 
                 // Remove the stored session
                 if (user != null) {
-                    UUID uuid = UUID.fromString(user.getName());
-
                     synchronized (sessions) {
-                        sessions.remove(uuid);
+                        sessions.remove(user.getName());
                     }
                 }
 

@@ -9,7 +9,6 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.UUID;
 
 /**
  * Manage websocket connections based on their associated user ID.
@@ -22,10 +21,10 @@ public class WebsocketUserManager {
     private WebsocketController controller;
 
     /**
-     * Disconnects a user's websocket connection by their principal ID.
+     * Disconnects a user's websocket connection by their unique ID.
      * @return Whether the user had an active connection that was removed.
      */
-    public boolean disconnectUser(@NotNull UUID id) {
+    public boolean disconnectUser(@NotNull String id) {
         WebSocketSession session;
 
         // Get the WS session

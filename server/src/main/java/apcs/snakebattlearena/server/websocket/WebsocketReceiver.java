@@ -3,16 +3,14 @@ package apcs.snakebattlearena.server.websocket;
 import apcs.snakebattlearena.models.*;
 import apcs.snakebattlearena.server.game.GameConfig;
 import apcs.snakebattlearena.server.game.GameService;
-import apcs.snakebattlearena.util.SemVer;
+import apcs.snakebattlearena.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Handle incoming websocket STOMP messages.
@@ -22,15 +20,10 @@ import java.util.UUID;
 public class WebsocketReceiver {
     @Autowired
     private GameService game;
-
     @Autowired
     private GameConfig config;
-
     @Autowired
     private WebsocketUserManager websocketUsers;
-
-    @Autowired
-    private SimpMessagingTemplate messaging;
 
     /**
      * Handle new snakes connecting and make new entity for them.
@@ -38,19 +31,15 @@ public class WebsocketReceiver {
     @MessageMapping("/join")
     @SendToUser(value = "/topic/join", broadcast = false)
     private JoinResponseData join(JoinData joinData, Principal user) {
-        // TODO: don't hardcode server version
-        final SemVer serverVersion = new SemVer(1, 0, 0);
-
-        // Check that the client major version matches the server
-        if (!serverVersion.equalsIgnore(joinData.getClientVersion(), false, false)) {
+        // Check that the client major/minor version matches the server
+        if (!Constants.VERSION.equalsIgnore(joinData.getClientVersion(), false, true)) {
             return JoinResponseData.Builder.builder()
                     .setError(JoinError.VERSION_MISMATCH)
                     .build();
         }
 
         // Add new player to the game
-        UUID id = UUID.fromString(user.getName());
-        Optional<JoinError> err = game.addPlayer(id, joinData.getSnake());
+        Optional<JoinError> err = game.addPlayer(user.getName(), joinData.getSnake());
 
         // Return the error
         if (err.isPresent()) {
@@ -71,15 +60,11 @@ public class WebsocketReceiver {
      * Handle authenticated disconnect requests based on the source websocket.
      */
     @MessageMapping("/leave")
-    private void leave(String snakeName, Principal user) {
-        if (!user.getName().equals(snakeName)) {
-            return;
-        }
+    private void leave(Principal user) {
+        if (user == null) return;
 
-        UUID uuid = UUID.fromString(user.getName());
-
-        if (game.removePlayer(uuid)) {
-            websocketUsers.disconnectUser(uuid);
+        if (game.removePlayer(user.getName())) {
+            websocketUsers.disconnectUser(user.getName());
         }
     }
 
@@ -89,6 +74,8 @@ public class WebsocketReceiver {
      */
     @MessageMapping("/move")
     private void move(MoveData data, Principal user) {
+        if (user == null) return;
+
         game.addPlayerMoveToQueue(user.getName(), data);
     }
 }

@@ -6,17 +6,21 @@ import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.UUID;
-
 /**
  * A snake used only for the server to store additional properties.
  */
 public class ServerSnake extends Snake {
-    private final UUID id;
+    private final String id;
     private Direction facing = null;
     private int missedTicks = 0;
 
-    public ServerSnake(@NotNull UUID id,
+    /**
+     * Create a server side snake with additional data
+     * @param id       The unique ID for the websocket connection.
+     * @param metadata Initializing metadata of this player
+     * @param initial  The initial head position of this snake.
+     */
+    public ServerSnake(@NotNull String id,
                        @NotNull SnakeMetadata metadata,
                        @NotNull Point initial) {
         super(metadata.getName(), metadata.getColor(), initial);
@@ -24,9 +28,10 @@ public class ServerSnake extends Snake {
     }
 
     /**
-     * Gets the principal ID associated with this snake's websocket connection.
+     * Gets the unique ID for this snake associated to the websocket connection.
      */
-    public UUID getId() {
+    @NotNull
+    public String getId() {
         return id;
     }
 

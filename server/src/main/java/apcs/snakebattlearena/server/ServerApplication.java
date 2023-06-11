@@ -13,6 +13,9 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.awt.*;
 
+/**
+ * The main entrypoint into the server that starts Spring Boot
+ */
 @SpringBootApplication
 @SuppressWarnings("unused")
 public class ServerApplication {

@@ -4,12 +4,10 @@ import apcs.snakebattlearena.Point;
 import apcs.snakebattlearena.entities.Entity;
 import apcs.snakebattlearena.entities.EntityModifier;
 import apcs.snakebattlearena.entities.ServerSnake;
-import apcs.snakebattlearena.entities.Snake;
 import apcs.snakebattlearena.models.*;
 import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import apcs.snakebattlearena.server.websocket.WebsocketSender;
 import apcs.snakebattlearena.server.websocket.WebsocketUserManager;
-import apcs.snakebattlearena.utils.Predicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,10 +71,11 @@ public class GameService {
 
     /**
      * Adds a new player to the board.
+     * @param id        A unique ID for this player.
      * @param snakeData The metadata about the new snake.
      * @return A join error if unsuccessful otherwise empty.
      */
-    public Optional<JoinError> addPlayer(UUID playerId, SnakeMetadata snakeData) {
+    public Optional<JoinError> addPlayer(String id, SnakeMetadata snakeData) {
         // Lock write access to entities
         tickLock.writeLock().lock();
 
@@ -90,7 +89,7 @@ public class GameService {
 
                 ServerSnake snake = (ServerSnake) e;
 
-                if (snake.getId().equals(playerId)) {
+                if (snake.getId().equals(id)) {
                     err = JoinError.INVALID_SESSION;
                     break;
                 }
@@ -106,15 +105,12 @@ public class GameService {
                 return Optional.of(err);
             }
 
-            // Store the new snake
-            ServerSnake snake = new ServerSnake(
-                    playerId,
-                    snakeData,
-                    board.getRandomPoint());
-
             logger.info("A new player {} has joined the game!", snakeData.getName());
 
+            // Store the new snake
+            ServerSnake snake = new ServerSnake(id, snakeData, board.getRandomPoint());
             entities.add(snake);
+
             return Optional.empty();
         } finally {
             // Remove the lock on entities
@@ -124,10 +120,10 @@ public class GameService {
 
     /**
      * Mark a player dead to be removed at the next tick, and disconnect their websocket connection.
-     * @param playerId The snake's ID ({@link ServerSnake#getId()})
+     * @param id The snake's unique ID.
      * @return True if the player exists and has been removed otherwise false.
      */
-    public boolean removePlayer(UUID playerId) {
+    public boolean removePlayer(String id) {
         // Lock access to entities
         tickLock.writeLock().lock();
 
@@ -135,7 +131,7 @@ public class GameService {
             // Find the snake by id
             ServerSnake snake = entities.stream()
                     .filter(Entity::isSnake).map(e -> (ServerSnake) e)
-                    .filter(s -> s.getId().equals(playerId))
+                    .filter(s -> s.getId().equals(id))
                     .findFirst().orElse(null);
 
             if (snake == null)
@@ -184,7 +180,7 @@ public class GameService {
             // Get all current alive players for this tick, and map each to their new calculated head position
             Map<ServerSnake, Point> snakeMoves = entities.parallelStream()
                     .filter(Entity::isSnake).map(entity -> (ServerSnake) entity) // Get all snakes
-                    .filter(Predicates.not(Snake::isDead)) // Find all alive snakes
+                    .filter(s -> !s.isDead()) // Filter out dead snakes
                     .collect(Collectors.toMap(
                             snake -> snake, // Map key
                             snake -> { // New snake head calculated based on queuedMoves
