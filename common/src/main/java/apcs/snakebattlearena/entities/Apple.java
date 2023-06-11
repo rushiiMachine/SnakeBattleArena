@@ -17,7 +17,7 @@ public class Apple implements Entity<AppleData> {
      * Internal method for creating a new arbitrary apple.
      * You should not ever need to make a new apple yourself.
      */
-    Apple(Point position, int reward) {
+    public Apple(Point position, int reward) {
         this.position = position;
         this.eaten = false;
         this.reward = reward;

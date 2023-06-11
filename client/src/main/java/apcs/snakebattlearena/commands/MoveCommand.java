@@ -3,6 +3,8 @@ package apcs.snakebattlearena.commands;
 import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.MoveData;
 
+import java.util.Objects;
+
 /**
  * Moves the snake in a certain direction upon a server tick.
  */
@@ -66,5 +68,18 @@ public class MoveCommand extends Command<MoveData> {
         return MoveData.Builder.builder()
                 .setDirection(direction)
                 .build();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MoveCommand)) return false;
+
+        return direction == ((MoveCommand) o).direction;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(direction);
     }
 }

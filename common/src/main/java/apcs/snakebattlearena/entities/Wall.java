@@ -3,6 +3,8 @@ package apcs.snakebattlearena.entities;
 import apcs.snakebattlearena.Point;
 import apcs.snakebattlearena.models.entities.WallData;
 
+import java.util.Objects;
+
 @SuppressWarnings("unused")
 public class Wall implements Entity<WallData> {
     private final Point start, end;
@@ -34,10 +36,12 @@ public class Wall implements Entity<WallData> {
     }
 
     public boolean isSingle() {
-        return start == end;
+        return Objects.equals(start, end);
     }
 
     public boolean isPointInWall(Point point) {
+        if (point == null) return false;
+
         if (start == point || end == point)
             return true;
 
@@ -71,5 +75,23 @@ public class Wall implements Entity<WallData> {
                 .setStart(start)
                 .setEnd(end)
                 .build();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Wall)) return false;
+
+        Wall wall = (Wall) o;
+
+        return Objects.equals(start, wall.start)
+                && Objects.equals(end, wall.end);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = start != null ? start.hashCode() : 0;
+        result = 31 * result + (end != null ? end.hashCode() : 0);
+        return result;
     }
 }

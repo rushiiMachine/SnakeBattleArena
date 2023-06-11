@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum DeathReason {
     DISCONNECT,
-    SNAKE_COLLISION,
+
+    COLLISION,
     SELF_COLLISION,
     BOARD_COLLISION,
 }

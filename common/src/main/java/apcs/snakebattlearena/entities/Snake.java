@@ -180,4 +180,23 @@ public class Snake implements Entity<SnakeData> {
                 .setCurledLength(curledLength)
                 .build();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Snake)) return false;
+
+        Snake snake = (Snake) o;
+        return curledLength == snake.curledLength
+                && Objects.equals(name, snake.name)
+                && Objects.equals(color, snake.color)
+                && Objects.equals(body, snake.body)
+                && Objects.equals(head, snake.head)
+                && deathReason == snake.deathReason;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, color, body, head, curledLength, deathReason);
+    }
 }
