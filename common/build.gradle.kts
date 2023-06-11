@@ -1,3 +1,7 @@
+plugins {
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+}
+
 dependencies {
     compileOnly("com.fasterxml.jackson.core:jackson-databind:2.14.2")
 

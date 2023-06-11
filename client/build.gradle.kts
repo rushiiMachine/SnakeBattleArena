@@ -1,4 +1,7 @@
+plugins {
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+}
+
 dependencies {
-    implementation(project(":common"))
-    implementation("org.java-websocket:Java-WebSocket:1.5.3")
+    implementation(project(":common", configuration = "shadow"))
 }
