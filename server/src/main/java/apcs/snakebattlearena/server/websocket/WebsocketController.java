@@ -86,6 +86,7 @@ public class WebsocketController implements WebSocketMessageBrokerConfigurer {
                 super.afterConnectionEstablished(session);
             }
 
+            // TODO: remove player from game after disconnect
             @Override
             public void afterConnectionClosed(@NotNull WebSocketSession session,
                                               @NotNull CloseStatus closeStatus) throws Exception {

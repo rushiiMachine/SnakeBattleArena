@@ -8,12 +8,14 @@ public abstract class Command<T> {
     /**
      * Internal websocket message identifier.
      * Sent to {@code /app/commands/<ID>}
+     * @hidden
      */
     public abstract String getId();
 
     /**
      * Converts this command into a serializable object to be sent to the server.
      * @return A JSON serializable object
+     * @hidden
      */
     public abstract T toJsonData();
 }

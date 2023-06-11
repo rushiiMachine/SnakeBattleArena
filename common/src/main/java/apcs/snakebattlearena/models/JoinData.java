@@ -9,14 +9,23 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Join request data from the client when initializing a new player.
+ */
 @AutoValue
 @JsonSerialize(as = JoinData.class)
 @JsonDeserialize(builder = JoinData.Builder.class)
 public abstract class JoinData {
+    /**
+     * Basic snake meta data (name, color, etc.)
+     */
     @NotNull
     @JsonProperty("snake")
     public abstract SnakeMetadata getSnake();
 
+    /**
+     * The client version to verify if it matches the server.
+     */
     @NotNull
     @JsonProperty("version")
     public abstract SemVer getClientVersion();

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import org.jetbrains.annotations.NotNull;
 
+// TODO: remove this instead in place for just the Direction
 @AutoValue
 @JsonSerialize(as = MoveData.class)
 @JsonDeserialize(builder = MoveData.Builder.class)

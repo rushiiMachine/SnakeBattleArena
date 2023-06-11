@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 /**
  * Returned errors upon attempting to join the game (/join)
+ * by {@link JoinResponseData}.
  */
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum JoinError {

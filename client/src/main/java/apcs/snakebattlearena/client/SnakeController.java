@@ -88,7 +88,7 @@ public abstract class SnakeController {
     /**
      * Connect to the server and run a blocking client for this snake.
      * @param host Any valid URI pointing to the server's websocket.
-     *             This can be an IP/Domain, w/ or w/o a port (defaulting to port 80).
+     *             This can be an IP/Domain, with or without a port (defaulting to port 4555).
      */
     public final void connect(String host) {
         Objects.requireNonNull(host, "Target host cannot be null!");

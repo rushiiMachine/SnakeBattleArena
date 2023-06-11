@@ -10,14 +10,25 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+/**
+ * All the data sent every tick to all clients, informing them
+ * to process it and return a new command for the next tick.
+ */
 @AutoValue
 @JsonSerialize(as = TickData.class)
 @JsonDeserialize(builder = TickData.Builder.class)
 public abstract class TickData {
+    /**
+     * All the alive entities on the board.
+     */
     @NotNull
     @JsonProperty("entities")
     public abstract List<EntityData> getEntities();
 
+    /**
+     * All the removed entities from the board in this tick.
+     * This includes dead snakes, eaten apples, etc.
+     */
     @NotNull
     @JsonProperty("removedEntities")
     public abstract List<EntityData> getRemovedEntities();

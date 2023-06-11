@@ -34,6 +34,7 @@ public class Snake implements Entity<SnakeData> {
     /**
      * Internal method for creating a new arbitrary snake.
      * You should not ever need to make a new snake yourself.
+     * @hidden
      */
     public Snake(@NotNull String name, @NotNull Color color, @NotNull Point head) {
         this.name = Objects.requireNonNull(name, "Cannot have snake with a null name!");
@@ -119,6 +120,7 @@ public class Snake implements Entity<SnakeData> {
 
     /**
      * Internal method for setting the snake death state.
+     * @hidden
      */
     public void internalSetDead(@Nullable DeathReason deathReason) {
         this.deathReason = deathReason;
@@ -135,6 +137,7 @@ public class Snake implements Entity<SnakeData> {
     /**
      * Internal method for moving the head and subsequently shifting
      * the old head into the body and uncurling the tail.
+     * @hidden
      */
     public void internalMove(@NotNull Point newHead) {
         boolean hasBody = !body.isEmpty();
@@ -154,6 +157,7 @@ public class Snake implements Entity<SnakeData> {
 
     /**
      * Internal method for increasing the curled tail length.
+     * @hidden
      */
     public void internalAddCurledLength(int amount) {
         if (amount < 0) {

@@ -13,7 +13,7 @@ public class SnakeInfo {
     private final Color color;
 
     /**
-     * Create a snake with a name and color
+     * Create a snake with a name and color.
      */
     public SnakeInfo(String name, Color color) {
         this.name = Objects.requireNonNull(name, "Snake name cannot be null");
@@ -21,7 +21,7 @@ public class SnakeInfo {
     }
 
     /**
-     * Create a snake with a name and a random color
+     * Create a snake with a name and a random color.
      */
     public SnakeInfo(String name) {
         Random rnd = new Random();
@@ -34,14 +34,14 @@ public class SnakeInfo {
     }
 
     /**
-     * Get this snake's name
+     * Get this snake's name.
      */
     public String getName() {
         return name;
     }
 
     /**
-     * Get this snake's color
+     * Get this snake's color.
      */
     public Color getColor() {
         return color;

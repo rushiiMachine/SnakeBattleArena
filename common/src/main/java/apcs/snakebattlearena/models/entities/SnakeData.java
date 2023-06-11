@@ -1,6 +1,7 @@
 package apcs.snakebattlearena.models.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.entities.Snake;
 import apcs.snakebattlearena.models.DeathReason;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,6 +13,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+/**
+ * Serialized JSON data for a snake.
+ * This is only used for tick data on entities.
+ * Refer to {@link Snake} for more information on the properties.
+ */
 @AutoValue
 @JsonSerialize(as = SnakeData.class)
 @JsonDeserialize(builder = SnakeData.Builder.class)

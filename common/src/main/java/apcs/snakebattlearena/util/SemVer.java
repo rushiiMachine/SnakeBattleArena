@@ -27,7 +27,7 @@ public final class SemVer implements Comparable<SemVer> {
     /**
      * Parse a SemVer from a string.
      * @param version The SemVer as a string.
-     * @throws IllegalArgumentException When the input version is not a valid SemVer vesion.
+     * @throws IllegalArgumentException When the input version is not a valid SemVer version.
      */
     public SemVer(String version) {
         // Split by dot (.)

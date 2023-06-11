@@ -34,6 +34,7 @@ public interface Entity<T extends EntityData> {
 
     /**
      * Serialize this entity into a JSON model ({@link T}).
+     * @hidden
      */
     T toJsonData();
 }

@@ -16,6 +16,7 @@ public class Apple implements Entity<AppleData> {
     /**
      * Internal method for creating a new arbitrary apple.
      * You should not ever need to make a new apple yourself.
+     * @hidden
      */
     public Apple(Point position, int reward) {
         this.position = position;
@@ -44,7 +45,8 @@ public class Apple implements Entity<AppleData> {
     }
 
     /**
-     * Internal method to set this apple as eaten (unavailable).
+     * Internal method to set this apple as eaten (aka unavailable).
+     * @hidden
      */
     public void internalSetAsEaten() {
         this.eaten = true;

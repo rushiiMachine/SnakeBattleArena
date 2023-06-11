@@ -1,6 +1,7 @@
 package apcs.snakebattlearena.models.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.entities.Apple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -8,6 +9,11 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Serialized JSON data for an apple.
+ * This is used only for tick data on entities.
+ * Refer to {@link Apple} for more information on the properties.
+ */
 @AutoValue
 @JsonSerialize(as = AppleData.class)
 @JsonDeserialize(builder = AppleData.Builder.class)

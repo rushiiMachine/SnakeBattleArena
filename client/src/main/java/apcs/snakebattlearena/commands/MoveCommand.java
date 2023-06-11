@@ -29,9 +29,6 @@ public class MoveCommand extends Command<MoveData> {
         throw new IllegalArgumentException("Invalid direction: " + direction);
     }
 
-    /**
-     * Internal websocket message identifier
-     */
     @Override
     public String getId() {
         return "MOVE";
@@ -41,6 +38,7 @@ public class MoveCommand extends Command<MoveData> {
     public MoveData toJsonData() {
         Direction direction;
 
+        // Convert the letter direction to enum
         switch (this.direction) {
             case 'L': {
                 direction = Direction.LEFT;

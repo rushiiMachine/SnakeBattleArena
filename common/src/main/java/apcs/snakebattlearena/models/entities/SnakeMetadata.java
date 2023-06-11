@@ -1,5 +1,7 @@
 package apcs.snakebattlearena.models.entities;
 
+import apcs.snakebattlearena.entities.Snake;
+import apcs.snakebattlearena.models.JoinData;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -9,6 +11,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 
+/**
+ * Serialized JSON data for a snake's metadata.
+ * This is used by {@link SnakeData} to encapsulate metadata,
+ * as well as {@link JoinData} to send information about the new player.
+ * Refer to {@link Snake} for more information on the properties.
+ */
 @AutoValue
 @JsonSerialize(as = SnakeMetadata.class)
 @JsonDeserialize(builder = SnakeMetadata.Builder.class)
