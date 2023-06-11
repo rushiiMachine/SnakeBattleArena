@@ -1,9 +1,7 @@
 package apcs.snakebattlearena.server;
 
-import apcs.snakebattlearena.serializers.ColorDeserializer;
-import apcs.snakebattlearena.serializers.ColorSerializer;
-import apcs.snakebattlearena.serializers.SemVerDeserializer;
-import apcs.snakebattlearena.serializers.SemVerSerializer;
+import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.serializers.*;
 import apcs.snakebattlearena.util.SemVer;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.boot.SpringApplication;
@@ -11,7 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
-import java.awt.*;
+import java.awt.Color;
 
 /**
  * The main entrypoint into the server that starts Spring Boot
@@ -34,6 +32,8 @@ public class ServerApplication {
                 .deserializerByType(Color.class, new ColorDeserializer())
                 .serializerByType(SemVer.class, new SemVerSerializer())
                 .deserializerByType(SemVer.class, new SemVerDeserializer())
+                .serializerByType(Point.class, new PointSerializer())
+                .deserializerByType(Point.class, new PointDeserializer())
                 .serializationInclusion(JsonInclude.Include.NON_DEFAULT);
     }
 }
