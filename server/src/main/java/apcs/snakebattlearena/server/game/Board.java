@@ -2,7 +2,6 @@ package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.Point;
 import apcs.snakebattlearena.entities.Apple;
-import apcs.snakebattlearena.entities.EntityModifier;
 import apcs.snakebattlearena.utils.Probability;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
@@ -123,7 +122,7 @@ public class Board {
         Point point = getRandomPoint();
 
         // Store the new apple
-        Apple apple = EntityModifier.newApple(point, APPLES_RANDOM.getRandomValue());
+        Apple apple = new Apple(point, APPLES_RANDOM.getRandomValue());
         Objects.requireNonNull(getSquare(point)).addOccupier(apple);
         return apple;
     }

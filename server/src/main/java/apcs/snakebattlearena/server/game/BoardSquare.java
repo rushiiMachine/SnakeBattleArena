@@ -2,7 +2,6 @@ package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.entities.Apple;
 import apcs.snakebattlearena.entities.Entity;
-import apcs.snakebattlearena.entities.EntityModifier;
 import apcs.snakebattlearena.entities.Snake;
 import apcs.snakebattlearena.models.DeathReason;
 
@@ -71,9 +70,10 @@ class BoardSquare {
                         // If a snake is already marked to be removed, then that means
                         // it's body is in this square twice, and as such is a self-collision.
                         DeathReason reason = removedEntities.add(snake)
-                                ? DeathReason.SNAKE_COLLISION
+                                ? DeathReason.COLLISION
                                 : DeathReason.SELF_COLLISION;
-                        EntityModifier.setSnakeDead(snake, reason);
+
+                        snake.internalSetDead(reason);
                     });
         } else {
             // Just snake and an apple are left
@@ -89,8 +89,8 @@ class BoardSquare {
                 return null;
 
             // Apply apple's effects to snake
-            EntityModifier.setAppleAsEaten(apple);
-            EntityModifier.addSnakeCurledLength(snake, apple.getReward());
+            apple.internalSetAsEaten();
+            snake.internalAddCurledLength(apple.getReward());
 
             removedEntities.add(apple);
         }

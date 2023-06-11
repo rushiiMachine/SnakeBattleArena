@@ -46,7 +46,7 @@ public class Apple implements Entity<AppleData> {
     /**
      * Internal method to set this apple as eaten (unavailable).
      */
-    void setAsEaten() {
+    public void internalSetAsEaten() {
         this.eaten = true;
     }
 

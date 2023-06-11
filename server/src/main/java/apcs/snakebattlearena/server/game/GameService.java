@@ -2,8 +2,7 @@ package apcs.snakebattlearena.server.game;
 
 import apcs.snakebattlearena.Point;
 import apcs.snakebattlearena.entities.Entity;
-import apcs.snakebattlearena.entities.EntityModifier;
-import apcs.snakebattlearena.entities.ServerSnake;
+import apcs.snakebattlearena.server.entities.ServerSnake;
 import apcs.snakebattlearena.models.*;
 import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import apcs.snakebattlearena.server.websocket.WebsocketSender;
@@ -140,7 +139,7 @@ public class GameService {
             logger.info("Player {} has left the game!", snake.getName());
 
             // Kill the snake to be removed at the next tick
-            EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
+            snake.internalSetDead(DeathReason.DISCONNECT);
             return true;
         } finally {
             // Unlock entities
@@ -189,7 +188,7 @@ public class GameService {
                                 // Update client alive status
                                 if (move == null && !snake.isClientAlive()) {
                                     logger.info("Player \"{}\" has missed a large amount of ticks, disconnecting...", snake.getName());
-                                    EntityModifier.setSnakeDead(snake, DeathReason.DISCONNECT);
+                                    snake.internalSetDead(DeathReason.DISCONNECT);
                                     websocketUsers.disconnectUser(snake.getId());
                                 } else if (move == null) {
                                     snake.incrementMissedTicks();
@@ -235,7 +234,7 @@ public class GameService {
                 if (board.isPointOnBoard(newHead)) {
                     // Move the head on the snake itself
                     Point oldTail = snake.getTail();
-                    EntityModifier.moveSnake(snake, newHead);
+                    snake.internalMove(newHead);
 
                     // If the tail has moved, then remove the old tail from the old square
                     if (!snake.getTail().equals(oldTail)) {
@@ -247,7 +246,7 @@ public class GameService {
                 } else {
                     // Kill this snake early because otherwise it won't be caught by
                     // the calculations inside each square
-                    EntityModifier.setSnakeDead(snake, DeathReason.BOARD_COLLISION);
+                    snake.internalSetDead(DeathReason.BOARD_COLLISION);
                 }
             });
 

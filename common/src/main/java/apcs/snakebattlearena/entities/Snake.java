@@ -35,7 +35,7 @@ public class Snake implements Entity<SnakeData> {
      * Internal method for creating a new arbitrary snake.
      * You should not ever need to make a new snake yourself.
      */
-    Snake(@NotNull String name, @NotNull Color color, @NotNull Point head) {
+    public Snake(@NotNull String name, @NotNull Color color, @NotNull Point head) {
         this.name = Objects.requireNonNull(name, "Cannot have snake with a null name!");
         this.color = Objects.requireNonNull(color, "Cannot have snake with a null color!");
         this.head = Objects.requireNonNull(head, "Cannot have snake with a null head point!");
@@ -120,7 +120,7 @@ public class Snake implements Entity<SnakeData> {
     /**
      * Internal method for setting the snake death state.
      */
-    void setDead(@Nullable DeathReason deathReason) {
+    public void internalSetDead(@Nullable DeathReason deathReason) {
         this.deathReason = deathReason;
     }
 
@@ -136,7 +136,7 @@ public class Snake implements Entity<SnakeData> {
      * Internal method for moving the head and subsequently shifting
      * the old head into the body and uncurling the tail.
      */
-    void moveSnake(@NotNull Point newHead) {
+    public void internalMove(@NotNull Point newHead) {
         boolean hasBody = !body.isEmpty();
 
         if (curledLength <= 0 && hasBody) {
@@ -155,7 +155,7 @@ public class Snake implements Entity<SnakeData> {
     /**
      * Internal method for increasing the curled tail length.
      */
-    void addCurledLength(int amount) {
+    public void internalAddCurledLength(int amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Cannot shrink curled length with a negative number!");
         }

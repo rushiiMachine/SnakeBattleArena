@@ -1,6 +1,7 @@
-package apcs.snakebattlearena.entities;
+package apcs.snakebattlearena.server.entities;
 
 import apcs.snakebattlearena.Point;
+import apcs.snakebattlearena.entities.Snake;
 import apcs.snakebattlearena.models.Direction;
 import apcs.snakebattlearena.models.entities.SnakeMetadata;
 import org.jetbrains.annotations.NotNull;
